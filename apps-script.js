@@ -26,6 +26,7 @@ const SHEETS = {
 const QUOTA_HEADERS = ["Sexo", "FaixaEtaria", "Meta", "Realizado", "Restante", "Status"];
 
 const RESPONSE_HEADERS = [
+  "UniqueId",
   "DataHora",
   "Pesquisador",
   "Cidade",
@@ -38,7 +39,9 @@ const RESPONSE_HEADERS = [
   "P3",
   "P4",
   "P5",
-  "RespostaAberta"
+  "RespostaAberta",
+  "Origem",
+  "StatusSincronizacao"
 ];
 
 function doGet(e) {
@@ -62,6 +65,8 @@ function handleRequest_(e) {
       result = checkQuota_(payload);
     } else if (action === "submitResponse") {
       result = submitResponse_(payload);
+    } else if (action === "getQuestions") {
+      result = getQuestionsData_();
     } else if (action === "dashboard") {
       result = getDashboardData_();
     } else {
@@ -157,9 +162,15 @@ function submitResponse_(payload) {
 
     ensureResponseHeaders_(responsesSheet);
 
-    const quota = findQuota_(quotasSheet, payload.sexo, payload.faixaEtaria);
+    const uniqueId = payload.uniqueId || Utilities.getUuid();
+    if (responseAlreadyExists_(responsesSheet, uniqueId)) {
+      return { ok: true, duplicate: true, message: "Resposta ja sincronizada anteriormente." };
+    }
 
-    if (!quota || !isQuotaOpen_(quota)) {
+    const quota = findQuota_(quotasSheet, payload.sexo, payload.faixaEtaria);
+    const isOfflineSync = normalizeText_(payload.origem) === "offline";
+
+    if ((!quota || !isQuotaOpen_(quota)) && !isOfflineSync) {
       return {
         ok: false,
         error: "quota_closed",
@@ -168,7 +179,8 @@ function submitResponse_(payload) {
     }
 
     responsesSheet.appendRow([
-      new Date(),
+      uniqueId,
+      payload.dataHora ? new Date(payload.dataHora) : new Date(),
       payload.pesquisador || "",
       payload.cidade || "",
       payload.regiao || "",
@@ -180,16 +192,20 @@ function submitResponse_(payload) {
       payload.p3 || "",
       payload.p4 || "",
       payload.p5 || "",
-      payload.respostaAberta || ""
+      payload.respostaAberta || "",
+      payload.origem || "Online",
+      payload.statusSincronizacao || "Sincronizada"
     ]);
 
-    const nextRealizado = quota.realizado + 1;
-    const nextRestante = Math.max(quota.meta - nextRealizado, 0);
-    const nextStatus = nextRestante > 0 ? "Aberta" : "Encerrada";
+    if (quota) {
+      const nextRealizado = quota.realizado + 1;
+      const nextRestante = Math.max(quota.meta - nextRealizado, 0);
+      const nextStatus = nextRestante > 0 ? "Aberta" : "Encerrada";
 
-    quotasSheet.getRange(quota.row, quota.columns.Realizado).setValue(nextRealizado);
-    quotasSheet.getRange(quota.row, quota.columns.Restante).setValue(nextRestante);
-    quotasSheet.getRange(quota.row, quota.columns.Status).setValue(nextStatus);
+      quotasSheet.getRange(quota.row, quota.columns.Realizado).setValue(nextRealizado);
+      quotasSheet.getRange(quota.row, quota.columns.Restante).setValue(nextRestante);
+      quotasSheet.getRange(quota.row, quota.columns.Status).setValue(nextStatus);
+    }
 
     return { ok: true, message: "Resposta salva com sucesso." };
   } finally {
@@ -202,6 +218,26 @@ function getDashboardData_() {
   const responsesSheet = getRequiredSheet_(spreadsheet, SHEETS.responses);
   const quotasSheet = getRequiredSheet_(spreadsheet, SHEETS.quotas);
   const responses = getSheetObjects_(responsesSheet);
+  const responseRows = responses.map(function(row) {
+    return {
+      UniqueId: row.UniqueId || "",
+      DataHora: formatDateValue_(row.DataHora),
+      Pesquisador: row.Pesquisador || "",
+      Cidade: row.Cidade || "",
+      Regiao: row.Regiao || "",
+      Endereco: row.Endereco || "",
+      Sexo: row.Sexo || "",
+      FaixaEtaria: row.FaixaEtaria || "",
+      P1: row.P1 || "",
+      P2: row.P2 || "",
+      P3: row.P3 || "",
+      P4: row.P4 || "",
+      P5: row.P5 || "",
+      RespostaAberta: row.RespostaAberta || "",
+      Origem: row.Origem || "",
+      StatusSincronizacao: row.StatusSincronizacao || ""
+    };
+  });
   const quotas = getSheetObjects_(quotasSheet).map(function(row) {
     return {
       sexo: row.Sexo || "",
@@ -220,8 +256,46 @@ function getDashboardData_() {
     byFaixaEtaria: countBy_(responses, "FaixaEtaria"),
     byCidade: countBy_(responses, "Cidade"),
     byPesquisador: countBy_(responses, "Pesquisador"),
+    responses: responseRows,
     quotas: quotas
   };
+}
+
+function getQuestionsData_() {
+  const spreadsheet = getSpreadsheet_();
+  const questionsSheet = getRequiredSheet_(spreadsheet, SHEETS.questions);
+  const rows = getSheetObjects_(questionsSheet);
+
+  const questions = rows.map(function(row, index) {
+    return {
+      id: row.ID || row.Id || row.id || ("P" + (index + 1)),
+      pergunta: row.Pergunta || row.pergunta || "",
+      tipo: row.Tipo || row.tipo || "Fechada",
+      a: row.A || row.AlternativaA || row["Alternativa A"] || "Alternativa A",
+      b: row.B || row.AlternativaB || row["Alternativa B"] || "Alternativa B",
+      c: row.C || row.AlternativaC || row["Alternativa C"] || "Alternativa C",
+      d: row.D || row.AlternativaD || row["Alternativa D"] || "Alternativa D",
+      ativa: row.Ativa || row.ativa || "Sim",
+      ordem: Number(row.Ordem || row.ordem || index + 1)
+    };
+  }).filter(function(question) {
+    return question.pergunta && normalizeText_(question.ativa) !== "nao";
+  }).sort(function(a, b) {
+    return a.ordem - b.ordem;
+  });
+
+  return {
+    ok: true,
+    questions: questions
+  };
+}
+
+function formatDateValue_(value) {
+  if (Object.prototype.toString.call(value) === "[object Date]" && !isNaN(value.getTime())) {
+    return value.toISOString();
+  }
+
+  return value || "";
 }
 
 function getSpreadsheet_() {
@@ -306,6 +380,29 @@ function validateRequiredResponse_(payload) {
   }
 }
 
+function responseAlreadyExists_(sheet, uniqueId) {
+  if (!uniqueId) return false;
+
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) return false;
+
+  const headers = values[0].map(function(header) {
+    return String(header).trim();
+  });
+  const columns = getColumnMap_(headers);
+  const uniqueIdColumn = columns.UniqueId;
+
+  if (!uniqueIdColumn) return false;
+
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][uniqueIdColumn - 1]).trim() === String(uniqueId).trim()) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function validateColumns_(columns, requiredHeaders, sheetName) {
   const missing = requiredHeaders.filter(function(header) {
     return !columns[header];
@@ -360,12 +457,36 @@ function normalizeText_(value) {
 }
 
 function ensureResponseHeaders_(sheet) {
-  const firstRow = sheet.getRange(1, 1, 1, RESPONSE_HEADERS.length).getValues()[0];
+  const firstRow = sheet.getRange(1, 1, 1, Math.max(RESPONSE_HEADERS.length, sheet.getLastColumn())).getValues()[0];
   const isEmpty = firstRow.every(function(cell) {
     return cell === "";
   });
 
   if (isEmpty) {
     sheet.getRange(1, 1, 1, RESPONSE_HEADERS.length).setValues([RESPONSE_HEADERS]);
+    return;
+  }
+
+  const headers = firstRow.map(function(header) {
+    return String(header).trim();
+  });
+
+  // Migra planilhas antigas que começavam em DataHora para o novo formato com UniqueId.
+  if (headers[0] === "DataHora") {
+    sheet.insertColumnBefore(1);
+    sheet.getRange(1, 1).setValue("UniqueId");
+  }
+
+  const currentLastColumn = sheet.getLastColumn();
+  const currentHeaders = sheet.getRange(1, 1, 1, currentLastColumn).getValues()[0].map(function(header) {
+    return String(header).trim();
+  });
+
+  if (currentHeaders.indexOf("Origem") === -1) {
+    sheet.getRange(1, currentLastColumn + 1).setValue("Origem");
+  }
+
+  if (currentHeaders.indexOf("StatusSincronizacao") === -1) {
+    sheet.getRange(1, sheet.getLastColumn() + 1).setValue("StatusSincronizacao");
   }
 }

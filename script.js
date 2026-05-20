@@ -8,6 +8,7 @@ const form = document.getElementById("surveyForm");
 const messageBox = document.getElementById("message");
 const checkQuotaButton = document.getElementById("checkQuotaButton");
 const questionsSection = document.getElementById("questionsSection");
+const dynamicQuestions = document.getElementById("dynamicQuestions");
 const submitButton = document.getElementById("submitButton");
 const offlineBox = document.getElementById("offlineBox");
 const connectionStatus = document.getElementById("connectionStatus");
@@ -16,6 +17,7 @@ const syncNowButton = document.getElementById("syncNowButton");
 
 let quotaIsOpen = false;
 let syncInProgress = false;
+let questionDefinitions = [];
 
 checkQuotaButton.addEventListener("click", checkQuota);
 form.addEventListener("submit", submitSurvey);
@@ -30,6 +32,7 @@ function initializeOfflineMode() {
   registerServiceWorker();
   updateConnectionBox();
   updatePendingCount();
+  loadQuestions();
 
   if (navigator.onLine) {
     syncPendingResponses();
@@ -85,6 +88,113 @@ function clearMessage() {
 function closeQuestions() {
   quotaIsOpen = false;
   questionsSection.classList.add("hidden");
+}
+
+async function loadQuestions() {
+  const cachedQuestions = getCachedQuestions();
+
+  if (cachedQuestions.length) {
+    questionDefinitions = cachedQuestions;
+    renderQuestions(questionDefinitions);
+  }
+
+  if (!navigator.onLine || !API_URL) {
+    if (!questionDefinitions.length) {
+      questionDefinitions = getFallbackQuestions();
+      renderQuestions(questionDefinitions);
+    }
+    return;
+  }
+
+  try {
+    const response = await apiRequest("getQuestions", {});
+    if (response.ok && response.questions && response.questions.length) {
+      questionDefinitions = normalizeQuestions(response.questions);
+      cacheQuestions(questionDefinitions);
+      renderQuestions(questionDefinitions);
+    } else if (!questionDefinitions.length) {
+      questionDefinitions = getFallbackQuestions();
+      renderQuestions(questionDefinitions);
+    }
+  } catch (error) {
+    console.warn("Nao foi possivel carregar perguntas da planilha. Usando cache/fallback.", error);
+    if (!questionDefinitions.length) {
+      questionDefinitions = getFallbackQuestions();
+      renderQuestions(questionDefinitions);
+    }
+  }
+}
+
+function normalizeQuestions(questions) {
+  return questions
+    .filter((question) => normalizeText(question.ativa || "Sim") !== "nao")
+    .sort((a, b) => Number(a.ordem || 99) - Number(b.ordem || 99))
+    .map((question, index) => ({
+      id: normalizeQuestionId(question.id || question.ID || `P${index + 1}`),
+      pergunta: question.pergunta || question.Pergunta || "",
+      tipo: question.tipo || question.Tipo || "Fechada",
+      a: question.a || question.A || "Alternativa A",
+      b: question.b || question.B || "Alternativa B",
+      c: question.c || question.C || "Alternativa C",
+      d: question.d || question.D || "Alternativa D",
+      ordem: Number(question.ordem || question.Ordem || index + 1)
+    }));
+}
+
+function normalizeQuestionId(id) {
+  const value = String(id || "").trim();
+  if (normalizeText(value) === "aberta") return "aberta";
+  return value.toLowerCase();
+}
+
+function renderQuestions(questions) {
+  const closedQuestions = questions
+    .filter((question) => normalizeText(question.tipo) !== "aberta" && question.id !== "aberta")
+    .slice(0, 5);
+  const openQuestion = questions.find((question) => normalizeText(question.tipo) === "aberta" || question.id === "aberta");
+
+  dynamicQuestions.innerHTML = closedQuestions.map((question, index) => {
+    const fieldName = `p${index + 1}`;
+    return `
+      <fieldset>
+        <legend>${index + 1}. ${escapeHtml(question.pergunta || `Pergunta ${index + 1}`)}</legend>
+        <label><input type="radio" name="${fieldName}" value="A" required> A) ${escapeHtml(question.a)}</label>
+        <label><input type="radio" name="${fieldName}" value="B"> B) ${escapeHtml(question.b)}</label>
+        <label><input type="radio" name="${fieldName}" value="C"> C) ${escapeHtml(question.c)}</label>
+        <label><input type="radio" name="${fieldName}" value="D"> D) ${escapeHtml(question.d)}</label>
+      </fieldset>
+    `;
+  }).join("");
+
+  dynamicQuestions.insertAdjacentHTML("beforeend", `
+    <label>
+      ${escapeHtml(openQuestion ? openQuestion.pergunta : "Pergunta aberta final")}
+      <textarea id="respostaAberta" name="respostaAberta" rows="5" placeholder="Escreva a resposta do entrevistado"></textarea>
+    </label>
+  `);
+}
+
+function getFallbackQuestions() {
+  return [
+    { id: "p1", pergunta: "Como voce avalia os servicos publicos da sua regiao?", tipo: "Fechada", a: "Muito bons", b: "Bons", c: "Regulares", d: "Ruins", ordem: 1 },
+    { id: "p2", pergunta: "Qual area deve receber mais atencao?", tipo: "Fechada", a: "Saude", b: "Educacao", c: "Seguranca", d: "Transporte", ordem: 2 },
+    { id: "p3", pergunta: "Com que frequencia voce acompanha noticias locais?", tipo: "Fechada", a: "Todos os dias", b: "Algumas vezes por semana", c: "Raramente", d: "Nunca", ordem: 3 },
+    { id: "p4", pergunta: "Qual canal voce mais usa para se informar?", tipo: "Fechada", a: "Televisao", b: "Radio", c: "Redes sociais", d: "Sites de noticias", ordem: 4 },
+    { id: "p5", pergunta: "Voce pretende participar mais das decisoes da sua comunidade?", tipo: "Fechada", a: "Sim, com certeza", b: "Talvez", c: "Pouco provavel", d: "Nao", ordem: 5 },
+    { id: "aberta", pergunta: "Pergunta aberta final", tipo: "Aberta", ordem: 6 }
+  ];
+}
+
+function cacheQuestions(questions) {
+  localStorage.setItem("dividados_questions_cache_v1", JSON.stringify(questions));
+}
+
+function getCachedQuestions() {
+  try {
+    return JSON.parse(localStorage.getItem("dividados_questions_cache_v1")) || [];
+  } catch (error) {
+    return [];
+  }
 }
 
 function getProfileData() {
@@ -222,6 +332,23 @@ function buildSurveyPayload(origin) {
     origem: origin,
     statusSincronizacao: origin === "Offline" ? "Pendente" : "Sincronizada"
   };
+}
+
+function normalizeText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function finishOfflineSave() {
