@@ -128,10 +128,10 @@ async function loadQuestions() {
 
 function normalizeQuestions(questions) {
   return questions
-    .filter((question) => normalizeText(question.ativa || "Sim") !== "nao")
+    .filter((question) => normalizeText(question.ativa || question.Ativa || "Sim") !== "nao")
     .sort((a, b) => Number(a.ordem || 99) - Number(b.ordem || 99))
     .map((question, index) => ({
-      id: normalizeQuestionId(question.id || question.ID || `P${index + 1}`),
+      id: normalizeQuestionId(question.id || question.ID || question.codigo || question.Codigo || `P${index + 1}`, question.tipo || question.Tipo, index),
       pergunta: question.pergunta || question.Pergunta || "",
       tipo: question.tipo || question.Tipo || "Fechada",
       a: question.a || question.A || "Alternativa A",
@@ -142,27 +142,36 @@ function normalizeQuestions(questions) {
     }));
 }
 
-function normalizeQuestionId(id) {
+function normalizeQuestionId(id, type, index) {
   const value = String(id || "").trim();
-  if (normalizeText(value) === "aberta") return "aberta";
+  const normalized = normalizeText(value);
+  const normalizedType = normalizeText(type);
+
+  if (normalized === "aberta" || normalized === "fechada") {
+    return normalizedType === "aberta" ? `ra${index + 1}` : `p${index + 1}`;
+  }
+
   return value.toLowerCase();
 }
 
 function renderQuestions(questions) {
   const closedQuestions = questions
-    .filter((question) => normalizeText(question.tipo) !== "aberta" && question.id !== "aberta")
+    .filter((question) => normalizeText(question.tipo) !== "aberta")
     .slice(0, MAX_CLOSED_QUESTIONS);
-  const openQuestion = questions.find((question) => normalizeText(question.tipo) === "aberta" || question.id === "aberta");
+  const openQuestions = questions.filter((question) => normalizeText(question.tipo) === "aberta").slice(0, 20);
 
   dynamicQuestions.innerHTML = closedQuestions.map((question, index) => {
-    const fieldName = `p${index + 1}`;
+    const questionCode = String(question.id || `p${index + 1}`).toLowerCase();
+    const fieldName = `q_${questionCode.replace(/[^a-z0-9]/g, "_")}`;
     const questionMeta = encodeURIComponent(JSON.stringify({
-      id: question.id || fieldName,
+      id: question.id || `p${index + 1}`,
+      campo: String(question.id || `P${index + 1}`).toUpperCase(),
       pergunta: question.pergunta || `Pergunta ${index + 1}`,
-      ordem: index + 1
+      tipo: "Fechada",
+      ordem: question.ordem || index + 1
     }));
     return `
-      <fieldset data-question-meta="${questionMeta}">
+      <fieldset data-question-meta="${questionMeta}" data-field-name="${fieldName}">
         <legend>${index + 1}. ${escapeHtml(question.pergunta || `Pergunta ${index + 1}`)}</legend>
         <label><input type="radio" name="${fieldName}" value="A" required> A) ${escapeHtml(question.a)}</label>
         <label><input type="radio" name="${fieldName}" value="B"> B) ${escapeHtml(question.b)}</label>
@@ -172,10 +181,29 @@ function renderQuestions(questions) {
     `;
   }).join("");
 
-  dynamicQuestions.insertAdjacentHTML("beforeend", `
-    <label>
-      ${escapeHtml(openQuestion ? openQuestion.pergunta : "Pergunta aberta final")}
-      <textarea id="respostaAberta" name="respostaAberta" rows="5" placeholder="Escreva a resposta do entrevistado"></textarea>
+  const openQuestionsHtml = openQuestions.map((question, index) => {
+    const questionCode = String(question.id || `ra${index + 1}`).toLowerCase();
+    const fieldName = `q_${questionCode.replace(/[^a-z0-9]/g, "_")}`;
+    const questionMeta = encodeURIComponent(JSON.stringify({
+      id: question.id || `ra${index + 1}`,
+      campo: String(question.id || `RA${index + 1}`).toUpperCase(),
+      pergunta: question.pergunta || `Pergunta aberta ${index + 1}`,
+      tipo: "Aberta",
+      ordem: question.ordem || index + 1
+    }));
+
+    return `
+      <label data-open-question-meta="${questionMeta}" data-field-name="${fieldName}">
+        ${escapeHtml(question.pergunta || `Pergunta aberta ${index + 1}`)}
+        <textarea name="${fieldName}" rows="5" placeholder="Escreva a resposta do entrevistado"></textarea>
+      </label>
+    `;
+  }).join("");
+
+  dynamicQuestions.insertAdjacentHTML("beforeend", openQuestionsHtml || `
+    <label data-open-question-meta="${encodeURIComponent(JSON.stringify({ id: "ra1", campo: "RA1", pergunta: "Pergunta aberta final", tipo: "Aberta", ordem: 999 }))}" data-field-name="q_ra1">
+      Pergunta aberta final
+      <textarea name="q_ra1" rows="5" placeholder="Escreva a resposta do entrevistado"></textarea>
     </label>
   `);
 }
@@ -320,6 +348,7 @@ function buildSurveyPayload(origin) {
   const formData = new FormData(form);
   const uniqueId = createUniqueId();
   const questionAnswers = collectQuestionAnswers(formData);
+  const firstOpenAnswer = questionAnswers.find((answer) => normalizeText(answer.tipo) === "aberta" && answer.resposta);
 
   return {
     uniqueId,
@@ -337,14 +366,14 @@ function buildSurveyPayload(origin) {
     p5: formData.get("p5"),
     respostas: questionAnswers,
     respostasJson: JSON.stringify(questionAnswers),
-    respostaAberta: formData.get("respostaAberta").trim(),
+    respostaAberta: firstOpenAnswer ? firstOpenAnswer.resposta : "",
     origem: origin,
     statusSincronizacao: origin === "Offline" ? "Pendente" : "Sincronizada"
   };
 }
 
 function collectQuestionAnswers(formData) {
-  return Array.from(dynamicQuestions.querySelectorAll("fieldset[data-question-meta]")).map((fieldset, index) => {
+  const closedAnswers = Array.from(dynamicQuestions.querySelectorAll("fieldset[data-question-meta]")).map((fieldset, index) => {
     let meta = {};
 
     try {
@@ -353,15 +382,38 @@ function collectQuestionAnswers(formData) {
       meta = {};
     }
 
-    const fieldName = `p${index + 1}`;
+    const fieldName = fieldset.dataset.fieldName || `p${index + 1}`;
 
     return {
-      campo: fieldName.toUpperCase(),
+      campo: String(meta.campo || meta.id || fieldName).toUpperCase(),
       id: meta.id || fieldName,
       pergunta: meta.pergunta || "",
+      tipo: meta.tipo || "Fechada",
       resposta: formData.get(fieldName) || ""
     };
   });
+
+  const openAnswers = Array.from(dynamicQuestions.querySelectorAll("[data-open-question-meta]")).map((label, index) => {
+    let meta = {};
+
+    try {
+      meta = JSON.parse(decodeURIComponent(label.dataset.openQuestionMeta || "{}"));
+    } catch (error) {
+      meta = {};
+    }
+
+    const fieldName = label.dataset.fieldName || `ra${index + 1}`;
+
+    return {
+      campo: String(meta.campo || meta.id || `RA${index + 1}`).toUpperCase(),
+      id: meta.id || `ra${index + 1}`,
+      pergunta: meta.pergunta || "",
+      tipo: meta.tipo || "Aberta",
+      resposta: String(formData.get(fieldName) || "").trim()
+    };
+  });
+
+  return [...closedAnswers, ...openAnswers];
 }
 
 function normalizeText(value) {

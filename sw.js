@@ -1,4 +1,4 @@
-const CACHE_NAME = "dividados-pesquisa-v1";
+const CACHE_NAME = "dividados-pesquisa-v2";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
@@ -26,7 +26,7 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
   event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request).then((cached) => {
+    fetch(event.request).catch(() => caches.match(event.request, { ignoreSearch: true }).then((cached) => {
       return cached || caches.match("./index.html");
     }))
   );

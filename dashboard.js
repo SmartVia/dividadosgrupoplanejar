@@ -123,26 +123,38 @@ function normalizeDashboardData(data, questionsResponse) {
 
 function normalizeQuestions(questions) {
   return (questions || [])
-    .map((question, index) => ({
-      code: String(question.id || question.ID || `P${index + 1}`).trim().toUpperCase(),
-      text: question.pergunta || question.Pergunta || "",
-      type: question.tipo || question.Tipo || "Fechada",
-      alternatives: {
-        A: question.a || question.A || "",
-        B: question.b || question.B || "",
-        C: question.c || question.C || "",
-        D: question.d || question.D || ""
-      },
-      active: normalizeText(question.ativa || question.Ativa || "Sim") !== "nao",
-      order: Number(question.ordem || question.Ordem || index + 1)
-    }))
+    .map((question, index) => {
+      const type = question.tipo || question.Tipo || "Fechada";
+      const order = Number(question.ordem || question.Ordem || index + 1);
+      let code = String(question.id || question.ID || `P${order || index + 1}`).trim().toUpperCase();
+
+      // Proteção para planilhas antigas/desalinhadas que enviavam "Aberta"
+      // ou "Fechada" como ID. O código nunca deve ser o tipo da pergunta.
+      if (normalizeText(code) === "aberta" || normalizeText(code) === "fechada") {
+        code = normalizeText(type) === "aberta" ? `RA${order || index + 1}` : `P${order || index + 1}`;
+      }
+
+      return {
+        code,
+        text: question.pergunta || question.Pergunta || "",
+        type,
+        alternatives: {
+          A: question.a || question.A || "",
+          B: question.b || question.B || "",
+          C: question.c || question.C || "",
+          D: question.d || question.D || ""
+        },
+        active: normalizeText(question.ativa || question.Ativa || "Sim") !== "nao",
+        order
+      };
+    })
     .sort((a, b) => a.order - b.order);
 }
 
 function getOpenQuestions() {
   return (dashboardData.questions || [])
     .filter((question) => question.active !== false)
-    .filter((question) => normalizeText(question.type) === "aberta" || /^RA\d+$/i.test(question.code))
+    .filter((question) => normalizeText(question.type) === "aberta")
     .sort((a, b) => a.order - b.order)
     .slice(0, 20);
 }
@@ -174,7 +186,8 @@ function extractOpenAnswers(row) {
 
   parsed.forEach((item, index) => {
     const code = String(item.campo || item.id || "").toUpperCase();
-    const isOpen = code.startsWith("RA") || normalizeText(item.tipo || item.type || "") === "aberta";
+    const type = normalizeText(item.tipo || item.type || "");
+    const isOpen = code.startsWith("RA") || type === "aberta";
     const text = item.respostaAberta || item.resposta || item.texto || "";
 
     if (isOpen && text) {
@@ -375,12 +388,14 @@ function renderQuestionCharts(responses) {
 
 function getDetectedQuestions(responses) {
   const fromSheet = (dashboardData.questions || []).filter((question) => normalizeText(question.type) !== "aberta");
+  const closedQuestionCodes = new Set(fromSheet.map((question) => question.code));
   const detectedCodes = new Set();
 
   responses.forEach((row) => {
     (row.respostas || []).forEach((answer, index) => {
       const code = String(answer.campo || answer.id || `P${index + 1}`).toUpperCase();
-      if (/^P\d+$/.test(code)) detectedCodes.add(code);
+      const isClosed = normalizeText(answer.tipo || answer.type || "") !== "aberta";
+      if (/^P\d+$/.test(code) && (closedQuestionCodes.has(code) || isClosed)) detectedCodes.add(code);
     });
 
     Object.keys(row).forEach((key) => {
@@ -390,7 +405,7 @@ function getDetectedQuestions(responses) {
     });
 
     Object.keys(row.raw || {}).forEach((key) => {
-      if (/^P\d+$/.test(key) && row.raw[key]) {
+      if (/^P\d+$/.test(key) && row.raw[key] && closedQuestionCodes.has(key.toUpperCase())) {
         detectedCodes.add(key.toUpperCase());
       }
     });
