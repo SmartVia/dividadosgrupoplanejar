@@ -99,6 +99,7 @@ async function loadDashboard() {
 function normalizeDashboardData(data, questionsResponse) {
   return {
     responses: (data.responses || []).map((row) => ({
+      raw: row,
       dataHora: row.DataHora || row.dataHora || "",
       pesquisador: row.Pesquisador || row.pesquisador || "",
       cidade: row.Cidade || row.cidade || "",
@@ -112,6 +113,7 @@ function normalizeDashboardData(data, questionsResponse) {
       p4: row.P4 || row.p4 || "",
       p5: row.P5 || row.p5 || "",
       respostas: parseResponseJson(row.RespostasJson || row.respostasJson || ""),
+      respostasAbertas: extractOpenAnswers(row),
       respostaAberta: row.RespostaAberta || row.respostaAberta || ""
     })),
     quotas: data.quotas || [],
@@ -121,10 +123,10 @@ function normalizeDashboardData(data, questionsResponse) {
 
 function normalizeQuestions(questions) {
   return (questions || [])
-    .filter((question) => normalizeText(question.tipo || "Fechada") !== "aberta")
     .map((question, index) => ({
       code: String(question.id || question.ID || `P${index + 1}`).trim().toUpperCase(),
       text: question.pergunta || question.Pergunta || "",
+      type: question.tipo || question.Tipo || "Fechada",
       alternatives: {
         A: question.a || question.A || "",
         B: question.b || question.B || "",
@@ -134,6 +136,78 @@ function normalizeQuestions(questions) {
       order: Number(question.ordem || question.Ordem || index + 1)
     }))
     .sort((a, b) => a.order - b.order);
+}
+
+function getOpenQuestions() {
+  return (dashboardData.questions || [])
+    .filter((question) => normalizeText(question.type) === "aberta" || question.code.startsWith("RA"))
+    .slice(0, 20);
+}
+
+function extractOpenAnswers(row) {
+  const answers = [];
+  const parsed = parseResponseJson(row.RespostasJson || row.respostasJson || "");
+
+  for (let i = 1; i <= 20; i++) {
+    const value = row[`RespostaAberta${i}`] || row[`respostaAberta${i}`] || "";
+    if (value) {
+      answers.push({
+        code: `RA${i}`,
+        questionText: "",
+        text: value,
+        order: i
+      });
+    }
+  }
+
+  if ((row.RespostaAberta || row.respostaAberta) && !answers.length) {
+    answers.push({
+      code: "RA1",
+      questionText: "",
+      text: row.RespostaAberta || row.respostaAberta,
+      order: 1
+    });
+  }
+
+  parsed.forEach((item, index) => {
+    const code = String(item.campo || item.id || "").toUpperCase();
+    const isOpen = code.startsWith("RA") || normalizeText(item.tipo || item.type || "") === "aberta";
+    const text = item.respostaAberta || item.resposta || item.texto || "";
+
+    if (isOpen && text) {
+      answers.push({
+        code: code || `RA${index + 1}`,
+        questionText: item.pergunta || "",
+        text,
+        order: Number(String(code).replace(/\D/g, "")) || index + 1
+      });
+    }
+  });
+
+  return dedupeOpenAnswers(answers).slice(0, 20);
+}
+
+function dedupeOpenAnswers(answers) {
+  const seen = new Set();
+  return answers.filter((answer) => {
+    const key = `${answer.code}::${answer.text}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function getOpenAnswersForRow(row) {
+  const questionMap = new Map(getOpenQuestions().map((question) => [question.code, question]));
+
+  return (row.respostasAbertas || []).map((answer) => {
+    const question = questionMap.get(answer.code);
+    return {
+      ...answer,
+      questionText: answer.questionText || (question ? question.text : ""),
+      order: answer.order || (question ? question.order : 99)
+    };
+  });
 }
 
 function populateFilters() {
@@ -297,7 +371,7 @@ function renderQuestionCharts(responses) {
 }
 
 function getDetectedQuestions(responses) {
-  const fromSheet = dashboardData.questions || [];
+  const fromSheet = (dashboardData.questions || []).filter((question) => normalizeText(question.type) !== "aberta");
   const detectedCodes = new Set();
 
   responses.forEach((row) => {
@@ -308,6 +382,12 @@ function getDetectedQuestions(responses) {
 
     Object.keys(row).forEach((key) => {
       if (/^p\d+$/i.test(key) && row[key]) {
+        detectedCodes.add(key.toUpperCase());
+      }
+    });
+
+    Object.keys(row.raw || {}).forEach((key) => {
+      if (/^P\d+$/.test(key) && row.raw[key]) {
         detectedCodes.add(key.toUpperCase());
       }
     });
@@ -446,65 +526,103 @@ function getWinner(question, counts) {
 }
 
 function renderOpenAnswers(responses) {
-  const answers = responses
-    .filter((row) => row.respostaAberta && row.respostaAberta.trim())
-    .sort((a, b) => new Date(b.dataHora || 0) - new Date(a.dataHora || 0));
+  const grouped = groupOpenAnswersByQuestion(responses);
+  const total = grouped.reduce((sum, group) => sum + group.answers.length, 0);
+  const container = document.getElementById("openQuestionCards");
 
-  document.getElementById("totalRespostasAbertas").textContent = answers.length;
-  renderRecentAnswers(answers);
-  renderTopWords(answers);
-  renderThemeSummary(answers);
-  renderOpenAnswersTable(answers);
-}
+  document.getElementById("totalRespostasAbertas").textContent = total;
 
-function renderRecentAnswers(answers) {
-  const list = document.getElementById("recentOpenAnswers");
-  const recent = answers.slice(0, 6);
-
-  list.innerHTML = recent.length ? recent.map((row) => `
-    <li>
-      <strong>${escapeHtml(row.cidade || "Sem cidade")}</strong>
-      <span>${escapeHtml(row.respostaAberta)}</span>
-    </li>
-  `).join("") : "<li>Nenhuma resposta aberta encontrada.</li>";
-}
-
-function renderTopWords(answers) {
-  const container = document.getElementById("topWords");
-  const words = topWords(answers.map((row) => row.respostaAberta).join(" "), 12);
-
-  container.innerHTML = words.length ? words.map((word) => `
-    <span>${escapeHtml(word.word)} <strong>${word.count}</strong></span>
-  `).join("") : "<span>Sem palavras suficientes</span>";
-}
-
-function renderThemeSummary(answers) {
-  const list = document.getElementById("themeSummary");
-  const themes = detectThemes(answers.map((row) => row.respostaAberta).join(" "));
-
-  list.innerHTML = themes.length ? themes.map((theme) => `
-    <li>${escapeHtml(theme.label)} <strong>${theme.count}</strong></li>
-  `).join("") : "<li>Nenhum tema predominante identificado.</li>";
-}
-
-function renderOpenAnswersTable(answers) {
-  const tableBody = document.getElementById("openAnswersTableBody");
-
-  if (!answers.length) {
-    tableBody.innerHTML = '<tr><td colspan="6">Nenhuma resposta aberta encontrada.</td></tr>';
+  if (!grouped.length) {
+    container.innerHTML = '<article class="insight-card open-question-card"><h3>Sem respostas abertas ainda</h3><p class="muted-text">As respostas abertas aparecerão aqui após a sincronização.</p></article>';
     return;
   }
 
-  tableBody.innerHTML = answers.map((row) => `
-    <tr>
-      <td>${escapeHtml(row.pesquisador)}</td>
-      <td>${escapeHtml(row.cidade)}</td>
-      <td>${escapeHtml(row.regiao)}</td>
-      <td>${escapeHtml(row.sexo)}</td>
-      <td>${escapeHtml(row.faixaEtaria)}</td>
-      <td class="wrap-cell">${escapeHtml(row.respostaAberta)}</td>
-    </tr>
-  `).join("");
+  container.innerHTML = grouped.map((group) => renderOpenQuestionCard(group)).join("");
+}
+
+function groupOpenAnswersByQuestion(responses) {
+  const openQuestions = getOpenQuestions();
+  const groups = new Map();
+
+  openQuestions.forEach((question, index) => {
+    groups.set(question.code, {
+      code: question.code,
+      text: question.text || question.code,
+      order: question.order || index + 1,
+      answers: []
+    });
+  });
+
+  responses.forEach((row) => {
+    getOpenAnswersForRow(row).forEach((answer) => {
+      if (!answer.text) return;
+
+      if (!groups.has(answer.code)) {
+        groups.set(answer.code, {
+          code: answer.code,
+          text: answer.questionText || answer.code,
+          order: answer.order || Number(answer.code.replace(/\D/g, "")) || 99,
+          answers: []
+        });
+      }
+
+      groups.get(answer.code).answers.push({
+        text: answer.text,
+        cidade: row.cidade,
+        regiao: row.regiao,
+        pesquisador: row.pesquisador,
+        sexo: row.sexo,
+        faixaEtaria: row.faixaEtaria,
+        dataHora: row.dataHora
+      });
+    });
+  });
+
+  return [...groups.values()]
+    .filter((group) => group.answers.length)
+    .sort((a, b) => a.order - b.order);
+}
+
+function renderOpenQuestionCard(group) {
+  const words = topWords(group.answers.map((answer) => answer.text).join(" "), 10);
+  const themes = detectThemes(group.answers.map((answer) => answer.text).join(" "));
+  const sortedAnswers = [...group.answers].sort((a, b) => new Date(b.dataHora || 0) - new Date(a.dataHora || 0));
+
+  return `
+    <article class="insight-card open-question-card">
+      <div class="open-question-header">
+        <span>${escapeHtml(group.code)}</span>
+        <div>
+          <h3>${escapeHtml(group.text)}</h3>
+          <p>${group.answers.length} ${group.answers.length === 1 ? "resposta" : "respostas"}</p>
+        </div>
+      </div>
+
+      <div class="open-question-content">
+        <div class="open-answer-list">
+          ${sortedAnswers.map((answer) => `
+            <div class="open-answer-item">
+              <strong>${escapeHtml(answer.cidade || "Sem cidade")}${answer.regiao ? " / " + escapeHtml(answer.regiao) : ""}</strong>
+              <p>"${escapeHtml(answer.text)}"</p>
+              <small>${escapeHtml(answer.pesquisador || "Pesquisador não informado")} · ${escapeHtml(answer.sexo || "")} ${escapeHtml(answer.faixaEtaria || "")}</small>
+            </div>
+          `).join("")}
+        </div>
+
+        <aside class="open-analysis-panel">
+          <h4>Palavras mais repetidas</h4>
+          <div class="word-cloud compact">
+            ${words.length ? words.map((word) => `<span>${escapeHtml(word.word)} <strong>${word.count}</strong></span>`).join("") : "<span>Sem palavras suficientes</span>"}
+          </div>
+
+          <h4>Principais temas</h4>
+          <ul class="theme-list compact">
+            ${themes.length ? themes.map((theme) => `<li>${escapeHtml(theme.label)} <strong>${theme.count}</strong></li>`).join("") : "<li>Nenhum tema predominante identificado.</li>"}
+          </ul>
+        </aside>
+      </div>
+    </article>
+  `;
 }
 
 function renderQuotas(quotas) {
@@ -570,6 +688,8 @@ function countQuestionByCode(rows, code) {
 function getAnswerForQuestion(row, code) {
   const field = code.toLowerCase();
   if (row[field]) return row[field];
+  if (row.raw && row.raw[code]) return row.raw[code];
+  if (row.raw && row.raw[field]) return row.raw[field];
 
   const index = Number(code.slice(1)) - 1;
   const answer = row.respostas && row.respostas[index] ? row.respostas[index].resposta : "";
@@ -600,7 +720,7 @@ function isQuotaOpen(quota) {
 }
 
 function topWords(text, limit) {
-  const stopWords = new Set(["a", "o", "os", "as", "um", "uma", "de", "do", "da", "dos", "das", "e", "em", "no", "na", "nos", "nas", "para", "por", "com", "que", "se", "ao", "aos", "mais", "menos", "muito", "muita", "muitos", "muitas", "ser", "ter", "tem", "foi", "sao", "sim", "nao"]);
+  const stopWords = new Set(["a", "o", "os", "as", "um", "uma", "uns", "umas", "de", "do", "da", "dos", "das", "e", "em", "no", "na", "nos", "nas", "para", "por", "com", "que", "se", "ao", "aos", "mais", "menos", "muito", "muita", "muitos", "muitas", "ser", "ter", "tem", "foi", "sao", "sim", "nao", "nao", "tambem", "sobre", "entre", "como", "quando", "onde", "porque", "pra", "pro", "pela", "pelo", "pelos", "pelas", "isso", "essa", "esse", "esta", "este", "eles", "elas", "ele", "ela", "voce", "voces", "minha", "meu", "sua", "seu"]);
   const counts = {};
 
   normalizeText(text)
