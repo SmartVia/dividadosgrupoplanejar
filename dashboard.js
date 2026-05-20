@@ -97,6 +97,8 @@ async function loadDashboard() {
 }
 
 function normalizeDashboardData(data, questionsResponse) {
+  const questions = normalizeQuestions(questionsResponse && questionsResponse.ok ? questionsResponse.questions : []);
+
   return {
     responses: (data.responses || []).map((row) => ({
       raw: row,
@@ -113,11 +115,11 @@ function normalizeDashboardData(data, questionsResponse) {
       p4: row.P4 || row.p4 || "",
       p5: row.P5 || row.p5 || "",
       respostas: parseResponseJson(row.RespostasJson || row.respostasJson || ""),
-      respostasAbertas: extractOpenAnswers(row),
+      respostasAbertas: extractOpenAnswers(row, questions),
       respostaAberta: row.RespostaAberta || row.respostaAberta || ""
     })),
     quotas: data.quotas || [],
-    questions: normalizeQuestions(questionsResponse && questionsResponse.ok ? questionsResponse.questions : [])
+    questions
   };
 }
 
@@ -159,15 +161,18 @@ function getOpenQuestions() {
     .slice(0, 20);
 }
 
-function extractOpenAnswers(row) {
+function extractOpenAnswers(row, questions) {
   const answers = [];
   const parsed = parseResponseJson(row.RespostasJson || row.respostasJson || "");
 
   for (let i = 1; i <= 20; i++) {
-    const value = row[`RA${i}`] || row[`ra${i}`] || row[`RespostaAberta${i}`] || row[`respostaAberta${i}`] || "";
+    const raValue = row[`RA${i}`] || row[`ra${i}`] || "";
+    const openValue = row[`RespostaAberta${i}`] || row[`respostaAberta${i}`] || "";
+    const value = raValue || openValue;
     if (value) {
+      const code = getOpenQuestionCodeForNumber(i, questions) || `RA${i}`;
       answers.push({
-        code: `RA${i}`,
+        code,
         questionText: "",
         text: value,
         order: i
@@ -201,6 +206,12 @@ function extractOpenAnswers(row) {
   });
 
   return dedupeOpenAnswers(answers).slice(0, 20);
+}
+
+function getOpenQuestionCodeForNumber(number, questions) {
+  const openQuestions = (questions || []).filter((question) => normalizeText(question.type) === "aberta");
+  const sameNumber = openQuestions.find((question) => Number(String(question.code).replace(/\D/g, "")) === number);
+  return sameNumber ? sameNumber.code : "";
 }
 
 function dedupeOpenAnswers(answers) {
