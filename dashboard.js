@@ -133,6 +133,7 @@ function normalizeQuestions(questions) {
         C: question.c || question.C || "",
         D: question.d || question.D || ""
       },
+      active: normalizeText(question.ativa || question.Ativa || "Sim") !== "nao",
       order: Number(question.ordem || question.Ordem || index + 1)
     }))
     .sort((a, b) => a.order - b.order);
@@ -140,7 +141,9 @@ function normalizeQuestions(questions) {
 
 function getOpenQuestions() {
   return (dashboardData.questions || [])
-    .filter((question) => normalizeText(question.type) === "aberta" || question.code.startsWith("RA"))
+    .filter((question) => question.active !== false)
+    .filter((question) => normalizeText(question.type) === "aberta" || /^RA\d+$/i.test(question.code))
+    .sort((a, b) => a.order - b.order)
     .slice(0, 20);
 }
 
@@ -149,7 +152,7 @@ function extractOpenAnswers(row) {
   const parsed = parseResponseJson(row.RespostasJson || row.respostasJson || "");
 
   for (let i = 1; i <= 20; i++) {
-    const value = row[`RespostaAberta${i}`] || row[`respostaAberta${i}`] || "";
+    const value = row[`RA${i}`] || row[`ra${i}`] || row[`RespostaAberta${i}`] || row[`respostaAberta${i}`] || "";
     if (value) {
       answers.push({
         code: `RA${i}`,
@@ -531,6 +534,7 @@ function renderOpenAnswers(responses) {
   const container = document.getElementById("openQuestionCards");
 
   document.getElementById("totalRespostasAbertas").textContent = total;
+  renderOpenQuestionsSummary(grouped);
 
   if (!grouped.length) {
     container.innerHTML = '<article class="insight-card open-question-card"><h3>Sem respostas abertas ainda</h3><p class="muted-text">As respostas abertas aparecerão aqui após a sincronização.</p></article>';
@@ -579,34 +583,37 @@ function groupOpenAnswersByQuestion(responses) {
   });
 
   return [...groups.values()]
-    .filter((group) => group.answers.length)
     .sort((a, b) => a.order - b.order);
 }
 
 function renderOpenQuestionCard(group) {
-  const words = topWords(group.answers.map((answer) => answer.text).join(" "), 10);
-  const themes = detectThemes(group.answers.map((answer) => answer.text).join(" "));
+  const validAnswers = getValidOpenAnswers(group.answers);
+  const words = topWords(validAnswers.map((answer) => answer.text).join(" "), 10);
+  const themes = detectThemes(validAnswers.map((answer) => answer.text).join(" "));
   const sortedAnswers = [...group.answers].sort((a, b) => new Date(b.dataHora || 0) - new Date(a.dataHora || 0));
+  const filtersText = getAppliedFiltersSummary();
+  const title = `${group.code} — ${group.text || group.code}`;
 
   return `
     <article class="insight-card open-question-card">
       <div class="open-question-header">
         <span>${escapeHtml(group.code)}</span>
         <div>
-          <h3>${escapeHtml(group.text)}</h3>
-          <p>${group.answers.length} ${group.answers.length === 1 ? "resposta" : "respostas"}</p>
+          <h3>${escapeHtml(title)}</h3>
+          <p>${group.answers.length} ${group.answers.length === 1 ? "resposta" : "respostas"} · ${validAnswers.length} válidas para análise</p>
+          ${filtersText ? `<small class="open-question-meta">Filtros: ${escapeHtml(filtersText)}</small>` : ""}
         </div>
       </div>
 
       <div class="open-question-content">
         <div class="open-answer-list">
-          ${sortedAnswers.map((answer) => `
+          ${sortedAnswers.length ? sortedAnswers.map((answer) => `
             <div class="open-answer-item">
               <strong>${escapeHtml(answer.cidade || "Sem cidade")}${answer.regiao ? " / " + escapeHtml(answer.regiao) : ""}</strong>
               <p>"${escapeHtml(answer.text)}"</p>
-              <small>${escapeHtml(answer.pesquisador || "Pesquisador não informado")} · ${escapeHtml(answer.sexo || "")} ${escapeHtml(answer.faixaEtaria || "")}</small>
+              <small>${escapeHtml(answer.pesquisador || "Pesquisador não informado")} · ${escapeHtml(answer.sexo || "Sexo não informado")} · ${escapeHtml(answer.faixaEtaria || "Faixa não informada")}</small>
             </div>
-          `).join("")}
+          `).join("") : '<div class="open-empty-state">Sem respostas abertas para esta pergunta ainda.</div>'}
         </div>
 
         <aside class="open-analysis-panel">
@@ -623,6 +630,78 @@ function renderOpenQuestionCard(group) {
       </div>
     </article>
   `;
+}
+
+function renderOpenQuestionsSummary(grouped) {
+  const tableBody = document.getElementById("openQuestionsSummaryTableBody");
+  if (!tableBody) return;
+
+  if (!grouped.length) {
+    tableBody.innerHTML = '<tr><td colspan="6">Nenhuma pergunta aberta ativa encontrada.</td></tr>';
+    return;
+  }
+
+  tableBody.innerHTML = grouped.map((group) => {
+    const validAnswers = getValidOpenAnswers(group.answers);
+    const words = topWords(validAnswers.map((answer) => answer.text).join(" "), 1);
+    const themes = detectThemes(validAnswers.map((answer) => answer.text).join(" "));
+    const topWord = words[0] ? `${words[0].word} (${words[0].count})` : "Sem dados";
+    const mainTheme = themes[0] ? `${themes[0].label} (${themes[0].count})` : "Sem tema predominante";
+
+    return `
+      <tr>
+        <td><strong>${escapeHtml(group.code)}</strong></td>
+        <td>${escapeHtml(group.text || group.code)}</td>
+        <td>${group.answers.length}</td>
+        <td>${escapeHtml(topWord)}</td>
+        <td>${escapeHtml(mainTheme)}</td>
+        <td>${countLowValueOpenAnswers(group.answers)}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function getValidOpenAnswers(answers) {
+  return (answers || []).filter((answer) => answer.text && !isLowValueOpenAnswer(answer.text));
+}
+
+function countLowValueOpenAnswers(answers) {
+  return (answers || []).filter((answer) => !answer.text || isLowValueOpenAnswer(answer.text)).length;
+}
+
+function isLowValueOpenAnswer(text) {
+  const normalized = normalizeText(text)
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const lowValueAnswers = new Set([
+    "",
+    "nao sei",
+    "nao quero falar",
+    "prefiro nao responder",
+    "nenhuma",
+    "nada",
+    "nao respondeu",
+    "sem resposta",
+    "sem opiniao"
+  ]);
+
+  return lowValueAnswers.has(normalized);
+}
+
+function getAppliedFiltersSummary() {
+  const labels = {
+    cidade: "Cidade",
+    regiao: "Região",
+    pesquisador: "Pesquisador",
+    sexo: "Sexo",
+    faixaEtaria: "Faixa etária"
+  };
+
+  return Object.entries(filters)
+    .filter(([, element]) => element && element.value)
+    .map(([key, element]) => `${labels[key]}: ${element.value}`)
+    .join(" | ");
 }
 
 function renderQuotas(quotas) {

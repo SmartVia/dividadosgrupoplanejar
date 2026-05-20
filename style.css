@@ -624,6 +624,13 @@ th {
   font-weight: 700;
 }
 
+.open-question-meta {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
 .open-question-content {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
@@ -659,6 +666,15 @@ th {
   font-weight: 700;
 }
 
+.open-empty-state {
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  color: var(--muted);
+  background: #f8fafc;
+  font-weight: 800;
+}
+
 .open-analysis-panel {
   border-left: 1px solid var(--line);
   padding-left: 16px;
@@ -676,6 +692,11 @@ th {
 
 .word-cloud.compact span {
   font-size: 0.86rem;
+}
+
+.open-summary-table {
+  margin-top: 18px;
+  box-shadow: none;
 }
 
 .theme-list.compact {
