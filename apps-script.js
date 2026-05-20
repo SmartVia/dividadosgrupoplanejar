@@ -14,7 +14,7 @@
   5. Cole a URL publicada em API_URL nos arquivos script.js e dashboard.js.
 */
 
-const SPREADSHEET_ID = "COLE_AQUI_O_ID_DA_SUA_PLANILHA";
+const SPREADSHEET_ID = "1IpL7FeQ5y0fo61yYgVIihyeiBmCkwV8WMrgmtsYhC1U";
 
 const SHEETS = {
   responses: "Respostas",
