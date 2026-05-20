@@ -103,6 +103,7 @@ function normalizeDashboardData(data) {
       p3: row.P3 || row.p3 || "",
       p4: row.P4 || row.p4 || "",
       p5: row.P5 || row.p5 || "",
+      respostas: parseResponseJson(row.RespostasJson || row.respostasJson || ""),
       respostaAberta: row.RespostaAberta || row.respostaAberta || ""
     })),
     quotas: data.quotas || []
@@ -328,14 +329,27 @@ function countBy(rows, field) {
 }
 
 function countQuestion(rows, field) {
+  const questionIndex = Number(String(field).replace("p", "")) - 1;
   const base = { A: 0, B: 0, C: 0, D: 0 };
   rows.forEach((row) => {
-    const answer = String(row[field] || "").trim().toUpperCase();
+    const jsonAnswer = row.respostas && row.respostas[questionIndex] ? row.respostas[questionIndex].resposta : "";
+    const answer = String(row[field] || jsonAnswer || "").trim().toUpperCase();
     if (base[answer] !== undefined) {
       base[answer] += 1;
     }
   });
   return base;
+}
+
+function parseResponseJson(value) {
+  if (!value) return [];
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
 }
 
 function countQuotaStatus(quotas) {

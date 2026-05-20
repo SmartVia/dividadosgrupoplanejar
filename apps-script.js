@@ -40,6 +40,7 @@ const RESPONSE_HEADERS = [
   "P4",
   "P5",
   "RespostaAberta",
+  "RespostasJson",
   "Origem",
   "StatusSincronizacao"
 ];
@@ -178,24 +179,7 @@ function submitResponse_(payload) {
       };
     }
 
-    responsesSheet.appendRow([
-      uniqueId,
-      payload.dataHora ? new Date(payload.dataHora) : new Date(),
-      payload.pesquisador || "",
-      payload.cidade || "",
-      payload.regiao || "",
-      payload.endereco || "",
-      payload.sexo || "",
-      payload.faixaEtaria || "",
-      payload.p1 || "",
-      payload.p2 || "",
-      payload.p3 || "",
-      payload.p4 || "",
-      payload.p5 || "",
-      payload.respostaAberta || "",
-      payload.origem || "Online",
-      payload.statusSincronizacao || "Sincronizada"
-    ]);
+    appendDynamicResponse_(responsesSheet, payload, uniqueId);
 
     if (quota) {
       const nextRealizado = quota.realizado + 1;
@@ -234,6 +218,7 @@ function getDashboardData_() {
       P4: row.P4 || "",
       P5: row.P5 || "",
       RespostaAberta: row.RespostaAberta || "",
+      RespostasJson: row.RespostasJson || "",
       Origem: row.Origem || "",
       StatusSincronizacao: row.StatusSincronizacao || ""
     };
@@ -370,14 +355,84 @@ function validateRequiredProfile_(payload) {
 function validateRequiredResponse_(payload) {
   validateRequiredProfile_(payload);
 
-  const requiredFields = ["pesquisador", "cidade", "regiao", "endereco", "p1", "p2", "p3", "p4", "p5"];
+  const requiredFields = ["pesquisador", "cidade", "regiao", "endereco"];
   const missing = requiredFields.filter(function(field) {
     return !payload[field];
   });
 
-  if (missing.length) {
-    throw new Error(`Dados incompletos para salvar resposta. Campos faltando: ${missing.join(", ")}.`);
+  const respostas = parseRespostas_(payload);
+  const unanswered = respostas.filter(function(item) {
+    return !item.resposta;
+  });
+
+  if (missing.length || unanswered.length) {
+    throw new Error("Dados incompletos para salvar resposta. Confira perfil e perguntas obrigatorias.");
   }
+}
+
+function appendDynamicResponse_(sheet, payload, uniqueId) {
+  const respostas = parseRespostas_(payload);
+  const headers = ensureDynamicResponseColumns_(sheet, respostas.length);
+  const rowObject = {
+    UniqueId: uniqueId,
+    DataHora: payload.dataHora ? new Date(payload.dataHora) : new Date(),
+    Pesquisador: payload.pesquisador || "",
+    Cidade: payload.cidade || "",
+    Regiao: payload.regiao || "",
+    Endereco: payload.endereco || "",
+    Sexo: payload.sexo || "",
+    FaixaEtaria: payload.faixaEtaria || "",
+    RespostaAberta: payload.respostaAberta || "",
+    RespostasJson: payload.respostasJson || JSON.stringify(respostas),
+    Origem: payload.origem || "Online",
+    StatusSincronizacao: payload.statusSincronizacao || "Sincronizada"
+  };
+
+  for (let i = 1; i <= 100; i++) {
+    rowObject["P" + i] = "";
+  }
+
+  respostas.forEach(function(item, index) {
+    if (index < 100) {
+      rowObject["P" + (index + 1)] = item.resposta || "";
+    }
+  });
+
+  const values = headers.map(function(header) {
+    return rowObject[header] !== undefined ? rowObject[header] : "";
+  });
+
+  sheet.appendRow(values);
+}
+
+function parseRespostas_(payload) {
+  if (payload.respostas && Array.isArray(payload.respostas)) {
+    return payload.respostas;
+  }
+
+  if (payload.respostasJson) {
+    try {
+      const parsed = JSON.parse(payload.respostasJson);
+      if (Array.isArray(parsed)) return parsed;
+    } catch (error) {
+      // Continua para fallback P1...P100.
+    }
+  }
+
+  const respostas = [];
+  for (let i = 1; i <= 100; i++) {
+    const value = payload["p" + i];
+    if (value) {
+      respostas.push({
+        campo: "P" + i,
+        id: "p" + i,
+        pergunta: "",
+        resposta: value
+      });
+    }
+  }
+
+  return respostas;
 }
 
 function responseAlreadyExists_(sheet, uniqueId) {
@@ -489,4 +544,32 @@ function ensureResponseHeaders_(sheet) {
   if (currentHeaders.indexOf("StatusSincronizacao") === -1) {
     sheet.getRange(1, sheet.getLastColumn() + 1).setValue("StatusSincronizacao");
   }
+}
+
+function ensureDynamicResponseColumns_(sheet, questionCount) {
+  ensureResponseHeaders_(sheet);
+
+  let headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(function(header) {
+    return String(header).trim();
+  });
+
+  const columnsToEnsure = [];
+  const maxQuestions = Math.min(Number(questionCount) || 0, 100);
+
+  for (let i = 1; i <= maxQuestions; i++) {
+    columnsToEnsure.push("P" + i);
+  }
+
+  columnsToEnsure.push("RespostaAberta", "RespostasJson", "Origem", "StatusSincronizacao");
+
+  columnsToEnsure.forEach(function(header) {
+    if (headers.indexOf(header) === -1) {
+      sheet.getRange(1, sheet.getLastColumn() + 1).setValue(header);
+      headers.push(header);
+    }
+  });
+
+  return sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(function(header) {
+    return String(header).trim();
+  });
 }

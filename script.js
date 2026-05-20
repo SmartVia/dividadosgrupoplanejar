@@ -3,6 +3,7 @@
 const API_URL = "https://script.google.com/macros/s/AKfycby1iZyydOBfSrNpKPx0HulX3gT-KhfUEaOxxcfCq6JaUyB2UF43dAVtKd9hNxSGOoD7/exec";
 
 const OFFLINE_QUEUE_KEY = "dividados_offline_queue_v1";
+const MAX_CLOSED_QUESTIONS = 100;
 
 const form = document.getElementById("surveyForm");
 const messageBox = document.getElementById("message");
@@ -150,13 +151,18 @@ function normalizeQuestionId(id) {
 function renderQuestions(questions) {
   const closedQuestions = questions
     .filter((question) => normalizeText(question.tipo) !== "aberta" && question.id !== "aberta")
-    .slice(0, 5);
+    .slice(0, MAX_CLOSED_QUESTIONS);
   const openQuestion = questions.find((question) => normalizeText(question.tipo) === "aberta" || question.id === "aberta");
 
   dynamicQuestions.innerHTML = closedQuestions.map((question, index) => {
     const fieldName = `p${index + 1}`;
+    const questionMeta = encodeURIComponent(JSON.stringify({
+      id: question.id || fieldName,
+      pergunta: question.pergunta || `Pergunta ${index + 1}`,
+      ordem: index + 1
+    }));
     return `
-      <fieldset>
+      <fieldset data-question-meta="${questionMeta}">
         <legend>${index + 1}. ${escapeHtml(question.pergunta || `Pergunta ${index + 1}`)}</legend>
         <label><input type="radio" name="${fieldName}" value="A" required> A) ${escapeHtml(question.a)}</label>
         <label><input type="radio" name="${fieldName}" value="B"> B) ${escapeHtml(question.b)}</label>
@@ -313,6 +319,7 @@ async function submitSurvey(event) {
 function buildSurveyPayload(origin) {
   const formData = new FormData(form);
   const uniqueId = createUniqueId();
+  const questionAnswers = collectQuestionAnswers(formData);
 
   return {
     uniqueId,
@@ -328,10 +335,33 @@ function buildSurveyPayload(origin) {
     p3: formData.get("p3"),
     p4: formData.get("p4"),
     p5: formData.get("p5"),
+    respostas: questionAnswers,
+    respostasJson: JSON.stringify(questionAnswers),
     respostaAberta: formData.get("respostaAberta").trim(),
     origem: origin,
     statusSincronizacao: origin === "Offline" ? "Pendente" : "Sincronizada"
   };
+}
+
+function collectQuestionAnswers(formData) {
+  return Array.from(dynamicQuestions.querySelectorAll("fieldset[data-question-meta]")).map((fieldset, index) => {
+    let meta = {};
+
+    try {
+      meta = JSON.parse(decodeURIComponent(fieldset.dataset.questionMeta || "{}"));
+    } catch (error) {
+      meta = {};
+    }
+
+    const fieldName = `p${index + 1}`;
+
+    return {
+      campo: fieldName.toUpperCase(),
+      id: meta.id || fieldName,
+      pergunta: meta.pergunta || "",
+      resposta: formData.get(fieldName) || ""
+    };
+  });
 }
 
 function normalizeText(value) {
