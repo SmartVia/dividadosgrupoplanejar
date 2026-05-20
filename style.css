@@ -349,3 +349,273 @@ th {
     min-height: 285px;
   }
 }
+
+/* Dashboard executivo */
+.dashboard-page {
+  background: #eef2f6;
+}
+
+.executive-dashboard {
+  width: min(100%, 1280px);
+  padding: 24px;
+}
+
+.dashboard-hero,
+.filter-panel,
+.dashboard-section,
+.insight-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.dashboard-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+  padding: 24px;
+}
+
+.dashboard-subtitle {
+  max-width: 620px;
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.filter-panel,
+.dashboard-section {
+  margin-bottom: 16px;
+  padding: 18px;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.executive-metrics {
+  grid-template-columns: repeat(7, minmax(130px, 1fr));
+}
+
+.executive-metrics .metric-card {
+  min-height: 118px;
+}
+
+.executive-metrics .metric-card strong {
+  color: #0f172a;
+  font-size: 2.15rem;
+}
+
+.muted-text {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.executive-charts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 14px;
+}
+
+.executive-charts .chart-card:first-child,
+.executive-charts .chart-card:nth-child(5) {
+  min-height: 340px;
+}
+
+.question-chart-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 14px;
+}
+
+.question-chart-grid .chart-card {
+  min-height: 300px;
+}
+
+.chart-card h3,
+.insight-card h3,
+.embedded-table h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.chart-card canvas {
+  height: 250px !important;
+  max-height: none;
+}
+
+.open-answer-section {
+  padding-bottom: 16px;
+}
+
+.open-answer-total {
+  display: grid;
+  gap: 2px;
+  min-width: 150px;
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  color: var(--primary-dark);
+  background: #dff5f1;
+  text-align: right;
+}
+
+.open-answer-total span {
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.open-answer-total strong {
+  font-size: 1.6rem;
+}
+
+.insight-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.9fr 0.9fr;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.insight-card {
+  padding: 16px;
+}
+
+.answer-list,
+.theme-list {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.answer-list li,
+.theme-list li {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+  color: #344054;
+}
+
+.answer-list strong {
+  display: block;
+  color: var(--primary-dark);
+}
+
+.answer-list span {
+  display: block;
+  margin-top: 3px;
+}
+
+.word-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.word-cloud span {
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: #164e63;
+  background: #e0f2fe;
+  font-weight: 700;
+}
+
+.theme-list strong,
+.word-cloud strong {
+  color: #0f172a;
+}
+
+.embedded-table {
+  margin-top: 16px;
+  box-shadow: none;
+}
+
+.wrap-cell {
+  max-width: 440px;
+  white-space: normal;
+}
+
+.print-only {
+  display: none;
+}
+
+@media (max-width: 1120px) {
+  .executive-metrics,
+  .question-chart-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filter-grid,
+  .insight-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .executive-dashboard {
+    padding: 12px;
+  }
+
+  .dashboard-hero,
+  .section-title-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .filter-grid,
+  .executive-metrics,
+  .executive-charts,
+  .question-chart-grid,
+  .insight-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .open-answer-total {
+    text-align: left;
+  }
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+
+  .no-print,
+  .header-actions,
+  .filter-panel,
+  .message {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  .dashboard-shell {
+    width: 100%;
+    padding: 0;
+  }
+
+  .dashboard-section,
+  .metric-card,
+  .chart-card,
+  .table-section,
+  .insight-card {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+
+  .metric-grid,
+  .chart-grid,
+  .insight-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .chart-card canvas {
+    height: 220px !important;
+  }
+}

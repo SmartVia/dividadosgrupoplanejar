@@ -7,58 +7,216 @@
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
-  <main class="dashboard-shell">
-    <header class="dashboard-header">
+<body class="dashboard-page">
+  <main class="dashboard-shell executive-dashboard">
+    <header class="dashboard-hero no-print">
       <div>
-        <p class="eyebrow">Acompanhamento</p>
-        <h1>Dashboard</h1>
+        <p class="eyebrow">Pesquisa de opinião e mercado</p>
+        <h1>Dividados Pesquisa</h1>
+        <p class="dashboard-subtitle">Painel executivo de acompanhamento das entrevistas, cotas e resultados.</p>
       </div>
       <div class="header-actions">
         <a class="small-link" href="index.html">Formulário</a>
-        <button id="refreshButton" class="secondary-button">Atualizar dados</button>
+        <button id="printButton" class="secondary-button" type="button">Gerar PDF</button>
+        <button id="refreshButton" class="primary-button" type="button">Atualizar dados</button>
       </div>
     </header>
 
-    <div id="dashboardMessage" class="message" hidden></div>
+    <section class="print-title print-only">
+      <h1>Dividados Pesquisa</h1>
+      <p>Relatório executivo de resultados</p>
+    </section>
 
-    <section class="metric-grid">
+    <div id="dashboardMessage" class="message no-print" hidden></div>
+
+    <section class="filter-panel no-print">
+      <div class="section-title-row">
+        <div>
+          <p class="eyebrow">Filtros</p>
+          <h2>Segmentação dos resultados</h2>
+        </div>
+        <button id="clearFiltersButton" class="secondary-button" type="button">Limpar filtros</button>
+      </div>
+
+      <div class="filter-grid">
+        <label>
+          Cidade
+          <select id="filterCidade"></select>
+        </label>
+        <label>
+          Região/Bairro
+          <select id="filterRegiao"></select>
+        </label>
+        <label>
+          Pesquisador
+          <select id="filterPesquisador"></select>
+        </label>
+        <label>
+          Sexo
+          <select id="filterSexo"></select>
+        </label>
+        <label>
+          Faixa etária
+          <select id="filterFaixaEtaria"></select>
+        </label>
+      </div>
+    </section>
+
+    <section class="metric-grid executive-metrics">
       <article class="metric-card">
         <span>Total de entrevistas</span>
         <strong id="totalEntrevistas">0</strong>
+      </article>
+      <article class="metric-card">
+        <span>Total por sexo</span>
+        <strong id="totalSexo">0</strong>
+      </article>
+      <article class="metric-card">
+        <span>Total por faixa etária</span>
+        <strong id="totalFaixa">0</strong>
+      </article>
+      <article class="metric-card">
+        <span>Total por cidade</span>
+        <strong id="totalCidade">0</strong>
+      </article>
+      <article class="metric-card">
+        <span>Total por região/bairro</span>
+        <strong id="totalRegiao">0</strong>
       </article>
       <article class="metric-card">
         <span>Cotas abertas</span>
         <strong id="cotasAbertas">0</strong>
       </article>
       <article class="metric-card">
-        <span>Cotas encerradas</span>
-        <strong id="cotasEncerradas">0</strong>
+        <span>Cotas fechadas</span>
+        <strong id="cotasFechadas">0</strong>
       </article>
     </section>
 
-    <section class="chart-grid">
-      <article class="chart-card">
-        <h2>Entrevistas por sexo</h2>
-        <canvas id="sexoChart"></canvas>
-      </article>
-      <article class="chart-card">
-        <h2>Entrevistas por faixa etária</h2>
-        <canvas id="faixaChart"></canvas>
-      </article>
-      <article class="chart-card">
-        <h2>Entrevistas por cidade</h2>
-        <canvas id="cidadeChart"></canvas>
-      </article>
-      <article class="chart-card">
-        <h2>Entrevistas por pesquisador</h2>
-        <canvas id="pesquisadorChart"></canvas>
-      </article>
+    <section class="dashboard-section">
+      <div class="section-title-row">
+        <div>
+          <p class="eyebrow">Perfil da amostra</p>
+          <h2>Distribuição das entrevistas</h2>
+        </div>
+        <span id="lastUpdated" class="muted-text"></span>
+      </div>
+
+      <div class="chart-grid executive-charts">
+        <article class="chart-card">
+          <h3>Sexo</h3>
+          <canvas id="sexoChart"></canvas>
+        </article>
+        <article class="chart-card">
+          <h3>Faixa etária</h3>
+          <canvas id="faixaChart"></canvas>
+        </article>
+        <article class="chart-card">
+          <h3>Cidade</h3>
+          <canvas id="cidadeChart"></canvas>
+        </article>
+        <article class="chart-card">
+          <h3>Região/Bairro</h3>
+          <canvas id="regiaoChart"></canvas>
+        </article>
+        <article class="chart-card">
+          <h3>Status das cotas</h3>
+          <canvas id="cotasStatusChart"></canvas>
+        </article>
+      </div>
+    </section>
+
+    <section class="dashboard-section">
+      <div class="section-title-row">
+        <div>
+          <p class="eyebrow">Perguntas fechadas</p>
+          <h2>Distribuição das alternativas</h2>
+        </div>
+      </div>
+
+      <div class="chart-grid question-chart-grid">
+        <article class="chart-card">
+          <h3>P1</h3>
+          <canvas id="p1Chart"></canvas>
+        </article>
+        <article class="chart-card">
+          <h3>P2</h3>
+          <canvas id="p2Chart"></canvas>
+        </article>
+        <article class="chart-card">
+          <h3>P3</h3>
+          <canvas id="p3Chart"></canvas>
+        </article>
+        <article class="chart-card">
+          <h3>P4</h3>
+          <canvas id="p4Chart"></canvas>
+        </article>
+        <article class="chart-card">
+          <h3>P5</h3>
+          <canvas id="p5Chart"></canvas>
+        </article>
+      </div>
+    </section>
+
+    <section class="dashboard-section open-answer-section">
+      <div class="section-title-row">
+        <div>
+          <p class="eyebrow">Qualitativo</p>
+          <h2>Análise das Respostas Abertas</h2>
+        </div>
+        <div class="open-answer-total">
+          <span>Respostas abertas</span>
+          <strong id="totalRespostasAbertas">0</strong>
+        </div>
+      </div>
+
+      <div class="insight-grid">
+        <article class="insight-card">
+          <h3>Respostas mais recentes</h3>
+          <ul id="recentOpenAnswers" class="answer-list"></ul>
+        </article>
+        <article class="insight-card">
+          <h3>Palavras mais repetidas</h3>
+          <div id="topWords" class="word-cloud"></div>
+        </article>
+        <article class="insight-card">
+          <h3>Principais temas citados</h3>
+          <ul id="themeSummary" class="theme-list"></ul>
+        </article>
+      </div>
+
+      <div class="table-section embedded-table">
+        <div class="section-title-row">
+          <h3>Tabela de respostas abertas</h3>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Pesquisador</th>
+                <th>Cidade</th>
+                <th>Região</th>
+                <th>Sexo</th>
+                <th>Faixa Etária</th>
+                <th>RespostaAberta</th>
+              </tr>
+            </thead>
+            <tbody id="openAnswersTableBody">
+              <tr>
+                <td colspan="6">Carregando respostas...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </section>
 
     <section class="table-section">
       <div class="section-title-row">
-        <h2>Status das cotas</h2>
+        <div>
+          <p class="eyebrow">Controle de campo</p>
+          <h2>Status das cotas</h2>
+        </div>
       </div>
       <div class="table-wrap">
         <table>
@@ -82,6 +240,6 @@
     </section>
   </main>
 
-  <script src="dashboard.js"></script>
+  <script src="dashboard.js?v=3"></script>
 </body>
 </html>
