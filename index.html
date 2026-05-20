@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dividados Pesquisa</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="panel">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">Pesquisa de campo</p>
+          <h1>Dividados Pesquisa</h1>
+        </div>
+        <a class="small-link" href="dashboard.html">Dashboard</a>
+      </header>
+
+      <div id="message" class="message" hidden></div>
+
+      <form id="surveyForm" autocomplete="off">
+        <section class="form-section">
+          <h2>Perfil do entrevistado</h2>
+
+          <label>
+            Nome do pesquisador
+            <input type="text" id="pesquisador" name="pesquisador" required>
+          </label>
+
+          <label>
+            Cidade
+            <input type="text" id="cidade" name="cidade" required>
+          </label>
+
+          <label>
+            Região/Bairro
+            <input type="text" id="regiao" name="regiao" required>
+          </label>
+
+          <label>
+            Endereço
+            <input type="text" id="endereco" name="endereco" required>
+          </label>
+
+          <div class="grid-two">
+            <label>
+              Sexo
+              <select id="sexo" name="sexo" required>
+                <option value="">Selecione</option>
+                <option value="Masculino">Masculino</option>
+                <option value="Feminino">Feminino</option>
+              </select>
+            </label>
+
+            <label>
+              Faixa etária
+              <select id="faixaEtaria" name="faixaEtaria" required>
+                <option value="">Selecione</option>
+                <option value="0 a 18">0 a 18</option>
+                <option value="19 a 30">19 a 30</option>
+                <option value="30 a 55">30 a 55</option>
+                <option value="Acima de 55">Acima de 55</option>
+              </select>
+            </label>
+          </div>
+
+          <button type="button" id="checkQuotaButton" class="secondary-button">
+            Verificar cota
+          </button>
+        </section>
+
+        <section id="questionsSection" class="form-section hidden">
+          <h2>Perguntas da pesquisa</h2>
+
+          <fieldset>
+            <legend>1. Como você avalia os serviços públicos da sua região?</legend>
+            <label><input type="radio" name="p1" value="A" required> A) Muito bons</label>
+            <label><input type="radio" name="p1" value="B"> B) Bons</label>
+            <label><input type="radio" name="p1" value="C"> C) Regulares</label>
+            <label><input type="radio" name="p1" value="D"> D) Ruins</label>
+          </fieldset>
+
+          <fieldset>
+            <legend>2. Qual área deve receber mais atenção?</legend>
+            <label><input type="radio" name="p2" value="A" required> A) Saúde</label>
+            <label><input type="radio" name="p2" value="B"> B) Educação</label>
+            <label><input type="radio" name="p2" value="C"> C) Segurança</label>
+            <label><input type="radio" name="p2" value="D"> D) Transporte</label>
+          </fieldset>
+
+          <fieldset>
+            <legend>3. Com que frequência você acompanha notícias locais?</legend>
+            <label><input type="radio" name="p3" value="A" required> A) Todos os dias</label>
+            <label><input type="radio" name="p3" value="B"> B) Algumas vezes por semana</label>
+            <label><input type="radio" name="p3" value="C"> C) Raramente</label>
+            <label><input type="radio" name="p3" value="D"> D) Nunca</label>
+          </fieldset>
+
+          <fieldset>
+            <legend>4. Qual canal você mais usa para se informar?</legend>
+            <label><input type="radio" name="p4" value="A" required> A) Televisão</label>
+            <label><input type="radio" name="p4" value="B"> B) Rádio</label>
+            <label><input type="radio" name="p4" value="C"> C) Redes sociais</label>
+            <label><input type="radio" name="p4" value="D"> D) Sites de notícias</label>
+          </fieldset>
+
+          <fieldset>
+            <legend>5. Você pretende participar mais das decisões da sua comunidade?</legend>
+            <label><input type="radio" name="p5" value="A" required> A) Sim, com certeza</label>
+            <label><input type="radio" name="p5" value="B"> B) Talvez</label>
+            <label><input type="radio" name="p5" value="C"> C) Pouco provável</label>
+            <label><input type="radio" name="p5" value="D"> D) Não</label>
+          </fieldset>
+
+          <label>
+            Pergunta aberta final
+            <textarea id="respostaAberta" name="respostaAberta" rows="5" placeholder="Escreva a resposta do entrevistado"></textarea>
+          </label>
+
+          <button type="submit" id="submitButton" class="primary-button">
+            Enviar
+          </button>
+        </section>
+      </form>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

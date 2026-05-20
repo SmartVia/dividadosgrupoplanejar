@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Dividados Pesquisa</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <main class="dashboard-shell">
+    <header class="dashboard-header">
+      <div>
+        <p class="eyebrow">Acompanhamento</p>
+        <h1>Dashboard</h1>
+      </div>
+      <div class="header-actions">
+        <a class="small-link" href="index.html">Formulário</a>
+        <button id="refreshButton" class="secondary-button">Atualizar dados</button>
+      </div>
+    </header>
+
+    <div id="dashboardMessage" class="message" hidden></div>
+
+    <section class="metric-grid">
+      <article class="metric-card">
+        <span>Total de entrevistas</span>
+        <strong id="totalEntrevistas">0</strong>
+      </article>
+      <article class="metric-card">
+        <span>Cotas abertas</span>
+        <strong id="cotasAbertas">0</strong>
+      </article>
+      <article class="metric-card">
+        <span>Cotas encerradas</span>
+        <strong id="cotasEncerradas">0</strong>
+      </article>
+    </section>
+
+    <section class="chart-grid">
+      <article class="chart-card">
+        <h2>Entrevistas por sexo</h2>
+        <canvas id="sexoChart"></canvas>
+      </article>
+      <article class="chart-card">
+        <h2>Entrevistas por faixa etária</h2>
+        <canvas id="faixaChart"></canvas>
+      </article>
+      <article class="chart-card">
+        <h2>Entrevistas por cidade</h2>
+        <canvas id="cidadeChart"></canvas>
+      </article>
+      <article class="chart-card">
+        <h2>Entrevistas por pesquisador</h2>
+        <canvas id="pesquisadorChart"></canvas>
+      </article>
+    </section>
+
+    <section class="table-section">
+      <div class="section-title-row">
+        <h2>Status das cotas</h2>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Sexo</th>
+              <th>Faixa etária</th>
+              <th>Meta</th>
+              <th>Realizado</th>
+              <th>Restante</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="quotasTableBody">
+            <tr>
+              <td colspan="6">Carregando dados...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
