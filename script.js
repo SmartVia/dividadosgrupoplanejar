@@ -1,6 +1,6 @@
 // Cole aqui a URL publicada do seu Google Apps Script.
 // Exemplo: const API_URL = "https://script.google.com/macros/s/SEU_ID/exec";
-const API_URL = "";
+const API_URL = "const API_URL = "https://script.google.com/macros/s/AKfycbxxxxxxxxxxxxxxxx/exec";";
 
 const form = document.getElementById("surveyForm");
 const messageBox = document.getElementById("message");
