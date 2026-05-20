@@ -308,12 +308,14 @@ function renderMetrics(responses, quotas) {
 
 function preparePrintMode() {
   printMode = true;
+  document.body.classList.add("printing");
   updatePrintHeader();
   renderCharts(getFilteredResponses(), dashboardData.quotas);
 }
 
 function restoreScreenMode() {
   printMode = false;
+  document.body.classList.remove("printing");
   renderCharts(getFilteredResponses(), dashboardData.quotas);
 }
 
@@ -527,7 +529,7 @@ function createQuestionChart(code, counts) {
 
 function getChartPixelRatio() {
   const base = window.devicePixelRatio || 1;
-  return printMode ? 4 : Math.max(base, 2);
+  return printMode ? 7 : Math.max(base, 2);
 }
 
 function renderQuestionLegend(question, counts, total) {

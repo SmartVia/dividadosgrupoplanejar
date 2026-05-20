@@ -763,6 +763,21 @@ th {
   display: none;
 }
 
+body.printing .pie-visual {
+  width: 180px;
+  max-width: 180px;
+  min-height: 180px;
+}
+
+body.printing .question-canvas-wrap {
+  width: 150px;
+  min-width: 150px;
+}
+
+body.printing .bar-visual {
+  min-height: 160px;
+}
+
 /* Refinamento executivo do dashboard */
 .dashboard-page {
   background:
@@ -1000,13 +1015,21 @@ td {
 @media print {
   @page {
     size: A4;
-    margin: 10mm 10mm 12mm;
+    margin: 8mm 9mm 11mm;
+  }
+
+  html,
+  body {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
   }
 
   body {
     background: #fff;
     color: #111827;
-    font-size: 9.5pt;
+    font-size: 9pt;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -1023,8 +1046,10 @@ td {
   }
 
   .dashboard-shell {
-    width: 100%;
+    width: 192mm !important;
+    max-width: 192mm !important;
     padding: 0;
+    margin: 0 auto;
   }
 
   .print-title {
@@ -1033,8 +1058,8 @@ td {
     align-items: end;
     justify-content: space-between;
     gap: 12px;
-    margin: 0 0 10px;
-    padding: 8px 0 9px;
+    margin: 0 auto 7mm;
+    padding: 0 0 5mm;
     border-top: 4px solid #0f766e;
     border-bottom: 1px solid #cfd8e3;
   }
@@ -1044,14 +1069,14 @@ td {
   .dashboard-section,
   .table-section {
     width: 100%;
-    max-width: 190mm;
+    max-width: none;
     margin-left: auto;
     margin-right: auto;
   }
 
   .print-title h1 {
     color: #0b1220;
-    font-size: 17pt;
+    font-size: 16pt;
     line-height: 1.05;
   }
 
@@ -1068,7 +1093,7 @@ td {
   }
 
   .print-meta div {
-    min-width: 76px;
+    min-width: 72px;
     padding: 5px 6px;
     border: 1px solid #d9dee7;
     border-radius: 4px;
@@ -1109,7 +1134,7 @@ td {
   .dashboard-section,
   .table-section,
   .metric-grid {
-    margin-bottom: 8px;
+    margin-bottom: 5mm;
   }
 
   .dashboard-section,
@@ -1118,7 +1143,7 @@ td {
   .table-section,
   .insight-card {
     border-color: #d7dde6;
-    border-radius: 7px;
+    border-radius: 5px;
     background: #fff;
   }
 
@@ -1133,16 +1158,16 @@ td {
   }
 
   .dashboard-section {
-    padding: 9px;
+    padding: 4mm;
   }
 
   .dashboard-section > .section-title-row {
-    padding-bottom: 5px;
+    padding-bottom: 2.5mm;
     border-bottom: 1px solid #edf1f5;
   }
 
   .section-title-row {
-    margin-bottom: 6px;
+    margin-bottom: 3mm;
   }
 
   .section-title-row h2 {
@@ -1155,18 +1180,18 @@ td {
 
   .metric-grid,
   .chart-grid {
-    gap: 7px;
+    gap: 3mm;
   }
 
   .executive-metrics {
     grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
-    gap: 5px;
-    margin-bottom: 8px;
+    gap: 2mm;
+    margin-bottom: 4mm;
   }
 
   .executive-metrics .metric-card {
-    min-height: 50px;
-    padding: 7px 6px;
+    min-height: 15mm;
+    padding: 2mm;
   }
 
   .executive-metrics .metric-card span {
@@ -1174,11 +1199,17 @@ td {
   }
 
   .executive-metrics .metric-card strong {
-    font-size: 15pt;
+    font-size: 13.5pt;
   }
 
   .executive-charts {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .executive-charts .chart-card:nth-child(5) {
+    grid-column: 1 / -1;
+    width: 92mm;
+    justify-self: center;
   }
 
   .question-chart-grid {
@@ -1186,8 +1217,8 @@ td {
   }
 
   .chart-card {
-    gap: 7px;
-    padding: 8px;
+    gap: 2.5mm;
+    padding: 3mm;
     min-width: 0;
   }
 
@@ -1198,24 +1229,24 @@ td {
   }
 
   .pie-visual {
-    width: 132px;
-    max-width: 132px;
-    min-height: 132px;
+    width: 42mm;
+    max-width: 42mm;
+    min-height: 42mm;
   }
 
   .bar-visual {
     width: 100%;
-    min-height: 118px;
+    min-height: 38mm;
   }
 
   .question-chart-layout {
-    grid-template-columns: 108px minmax(0, 1fr);
-    gap: 8px;
+    grid-template-columns: 34mm minmax(0, 1fr);
+    gap: 3mm;
   }
 
   .question-canvas-wrap {
-    width: 108px;
-    min-width: 108px;
+    width: 34mm;
+    min-width: 34mm;
   }
 
   .chart-visual canvas,
@@ -1227,7 +1258,7 @@ td {
   .legend-row {
     grid-template-columns: 8px 1fr;
     gap: 6px;
-    font-size: 7.2pt;
+    font-size: 7pt;
   }
 
   .legend-color {
@@ -1237,7 +1268,7 @@ td {
 
   .open-question-content {
     grid-template-columns: 1fr;
-    gap: 9px;
+    gap: 3mm;
   }
 
   .open-answer-list {
@@ -1246,7 +1277,7 @@ td {
   }
 
   .open-answer-item {
-    padding: 7px;
+    padding: 2.5mm;
   }
 
   .open-analysis-panel {
@@ -1276,8 +1307,8 @@ td {
 
   .table-section,
   .embedded-table {
-    padding: 8px;
-    margin-top: 7px;
+    padding: 3mm;
+    margin-top: 3mm;
   }
 
   a[href]::after {
