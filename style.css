@@ -230,6 +230,51 @@ button:disabled {
   color: var(--error-text);
 }
 
+.offline-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  background: #f8fafc;
+}
+
+.offline-box div {
+  display: grid;
+  gap: 3px;
+}
+
+.offline-box strong {
+  color: var(--text);
+}
+
+.offline-box span {
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.offline-box.is-online {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.offline-box.is-online strong {
+  color: var(--success-text);
+}
+
+.offline-box.is-offline {
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+
+.offline-box.is-offline strong {
+  color: #9a3412;
+}
+
 .hidden {
   display: none;
 }
@@ -334,6 +379,7 @@ th {
 
   .page-header,
   .dashboard-header,
+  .offline-box,
   .header-actions {
     align-items: flex-start;
     flex-direction: column;

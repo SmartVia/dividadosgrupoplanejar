@@ -17,6 +17,14 @@
         <a class="small-link" href="dashboard.html">Dashboard</a>
       </header>
 
+      <section id="offlineBox" class="offline-box">
+        <div>
+          <strong id="connectionStatus">Verificando conexão...</strong>
+          <span id="pendingCountText">0 pesquisas pendentes de sincronização</span>
+        </div>
+        <button type="button" id="syncNowButton" class="secondary-button">Sincronizar agora</button>
+      </section>
+
       <div id="message" class="message" hidden></div>
 
       <form id="surveyForm" autocomplete="off">

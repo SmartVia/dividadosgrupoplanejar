@@ -1,30 +1,75 @@
 // Cole somente a URL publicada do seu Google Apps Script entre as aspas.
-// Certo: const API_URL = "https://script.google.com/macros/s/SEU_ID/exec";
-// Errado: const API_URL = "const API_URL = \"https://script.google.com/macros/s/SEU_ID/exec\";";
+// Esta URL precisa ser a URL do App da Web publicado no Apps Script.
 const API_URL = "https://script.google.com/macros/s/AKfycby1iZyydOBfSrNpKPx0HulX3gT-KhfUEaOxxcfCq6JaUyB2UF43dAVtKd9hNxSGOoD7/exec";
+
+const OFFLINE_QUEUE_KEY = "dividados_offline_queue_v1";
 
 const form = document.getElementById("surveyForm");
 const messageBox = document.getElementById("message");
 const checkQuotaButton = document.getElementById("checkQuotaButton");
 const questionsSection = document.getElementById("questionsSection");
 const submitButton = document.getElementById("submitButton");
+const offlineBox = document.getElementById("offlineBox");
+const connectionStatus = document.getElementById("connectionStatus");
+const pendingCountText = document.getElementById("pendingCountText");
+const syncNowButton = document.getElementById("syncNowButton");
 
 let quotaIsOpen = false;
+let syncInProgress = false;
 
-if (!checkQuotaButton) {
-  console.error("Botao #checkQuotaButton nao encontrado no HTML.");
-} else {
-  checkQuotaButton.addEventListener("click", checkQuota);
-}
-
-if (!form) {
-  console.error("Formulario #surveyForm nao encontrado no HTML.");
-} else {
-  form.addEventListener("submit", submitSurvey);
-}
-
+checkQuotaButton.addEventListener("click", checkQuota);
+form.addEventListener("submit", submitSurvey);
+syncNowButton.addEventListener("click", syncPendingResponses);
+window.addEventListener("online", handleConnectionChange);
+window.addEventListener("offline", handleConnectionChange);
 document.getElementById("sexo").addEventListener("change", closeQuestions);
 document.getElementById("faixaEtaria").addEventListener("change", closeQuestions);
+document.addEventListener("DOMContentLoaded", initializeOfflineMode);
+
+function initializeOfflineMode() {
+  registerServiceWorker();
+  updateConnectionBox();
+  updatePendingCount();
+
+  if (navigator.onLine) {
+    syncPendingResponses();
+  }
+}
+
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+
+  navigator.serviceWorker.register("sw.js").catch((error) => {
+    console.warn("Nao foi possivel registrar o service worker:", error);
+  });
+}
+
+function handleConnectionChange() {
+  updateConnectionBox();
+
+  if (navigator.onLine) {
+    showMessage("Conexao restabelecida. Tentando sincronizar pesquisas pendentes.", "info");
+    syncPendingResponses();
+  }
+}
+
+function updateConnectionBox() {
+  if (navigator.onLine) {
+    offlineBox.classList.remove("is-offline");
+    offlineBox.classList.add("is-online");
+    connectionStatus.textContent = "Online — enviando em tempo real";
+  } else {
+    offlineBox.classList.remove("is-online");
+    offlineBox.classList.add("is-offline");
+    connectionStatus.textContent = "Offline — respostas serão salvas neste aparelho";
+  }
+}
+
+function updatePendingCount() {
+  const total = getPendingQueue().length;
+  pendingCountText.textContent = `${total} ${total === 1 ? "pesquisa pendente" : "pesquisas pendentes"} de sincronização`;
+  syncNowButton.disabled = total === 0 || syncInProgress;
+}
 
 function showMessage(text, type) {
   messageBox.textContent = text;
@@ -65,14 +110,20 @@ function validateProfile(profile) {
 async function checkQuota() {
   clearMessage();
 
-  if (!API_URL) {
-    showMessage("Configure a constante API_URL no arquivo script.js antes de usar o formulario.", "error");
-    console.error("API_URL esta vazia. Cole a URL publicada do Google Apps Script em script.js.");
+  const profile = getProfileData();
+  if (!validateProfile(profile)) return;
+
+  if (!navigator.onLine) {
+    quotaIsOpen = true;
+    questionsSection.classList.remove("hidden");
+    showMessage("Sem internet. A verificação de cota não está disponível agora, mas você pode continuar a pesquisa. A resposta será sincronizada depois.", "info");
     return;
   }
 
-  const profile = getProfileData();
-  if (!validateProfile(profile)) return;
+  if (!API_URL) {
+    showMessage("Configure a constante API_URL no arquivo script.js antes de usar o formulario.", "error");
+    return;
+  }
 
   checkQuotaButton.disabled = true;
   checkQuotaButton.textContent = "Verificando...";
@@ -84,8 +135,6 @@ async function checkQuota() {
       faixaEtaria: profile.faixaEtaria
     });
 
-    console.log("Resposta checkQuota:", response);
-
     if (response.ok && response.open) {
       quotaIsOpen = true;
       questionsSection.classList.remove("hidden");
@@ -95,7 +144,6 @@ async function checkQuota() {
 
     closeQuestions();
     showMessage(response.message || "Cota encerrada para este perfil. Procure outro entrevistado.", "error");
-    console.warn("Cota fechada ou nao encontrada:", response);
   } catch (error) {
     closeQuestions();
     console.error("Erro ao verificar cota:", error);
@@ -110,13 +158,55 @@ async function submitSurvey(event) {
   event.preventDefault();
   clearMessage();
 
-  if (!quotaIsOpen) {
+  if (!quotaIsOpen && navigator.onLine) {
     showMessage("Verifique uma cota aberta antes de enviar.", "error");
     return;
   }
 
+  const payload = buildSurveyPayload(navigator.onLine ? "Online" : "Offline");
+
+  submitButton.disabled = true;
+  submitButton.textContent = navigator.onLine ? "Enviando..." : "Salvando...";
+
+  if (!navigator.onLine) {
+    saveOfflineResponse(payload);
+    finishOfflineSave();
+    return;
+  }
+
+  try {
+    const response = await apiRequest("submitResponse", payload);
+
+    if (response.ok) {
+      showMessage("Entrevista salva com sucesso.", "success");
+      resetFormAfterSave();
+    } else if (response.error === "quota_closed") {
+      closeQuestions();
+      showMessage("Cota encerrada para este perfil. Procure outro entrevistado.", "error");
+    } else {
+      showMessage(response.message || "Nao foi possivel salvar a entrevista.", "error");
+    }
+  } catch (error) {
+    console.error("Falha no envio online. Salvando offline:", error);
+    payload.origem = "Offline";
+    payload.statusSincronizacao = "Pendente";
+    saveOfflineResponse(payload);
+    showMessage("Sem conexão com a API. A pesquisa foi salva neste aparelho e será sincronizada depois.", "info");
+    resetFormAfterSave();
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = "Enviar";
+    updatePendingCount();
+  }
+}
+
+function buildSurveyPayload(origin) {
   const formData = new FormData(form);
-  const payload = {
+  const uniqueId = createUniqueId();
+
+  return {
+    uniqueId,
+    dataHora: new Date().toISOString(),
     pesquisador: formData.get("pesquisador").trim(),
     cidade: formData.get("cidade").trim(),
     regiao: formData.get("regiao").trim(),
@@ -128,35 +218,99 @@ async function submitSurvey(event) {
     p3: formData.get("p3"),
     p4: formData.get("p4"),
     p5: formData.get("p5"),
-    respostaAberta: formData.get("respostaAberta").trim()
+    respostaAberta: formData.get("respostaAberta").trim(),
+    origem: origin,
+    statusSincronizacao: origin === "Offline" ? "Pendente" : "Sincronizada"
   };
+}
 
-  submitButton.disabled = true;
-  submitButton.textContent = "Enviando...";
-  showMessage("Enviando resposta...", "info");
+function finishOfflineSave() {
+  showMessage("Pesquisa salva neste aparelho. Ela será enviada automaticamente quando a internet voltar.", "success");
+  resetFormAfterSave();
+  submitButton.disabled = false;
+  submitButton.textContent = "Enviar";
+  updatePendingCount();
+}
 
+function resetFormAfterSave() {
+  form.reset();
+  closeQuestions();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function createUniqueId() {
+  const randomPart = Math.random().toString(36).slice(2, 10);
+  return `dividados-${Date.now()}-${randomPart}`;
+}
+
+function getPendingQueue() {
   try {
-    const response = await apiRequest("submitResponse", payload);
-    console.log("Resposta submitResponse:", response);
-
-    if (response.ok) {
-      showMessage("Entrevista salva com sucesso.", "success");
-      form.reset();
-      closeQuestions();
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } else if (response.error === "quota_closed") {
-      closeQuestions();
-      showMessage("Cota encerrada para este perfil. Procure outro entrevistado.", "error");
-    } else {
-      console.warn("Resposta da API ao salvar:", response);
-      showMessage(response.message || "Nao foi possivel salvar a entrevista.", "error");
-    }
+    return JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY)) || [];
   } catch (error) {
-    console.error("Erro ao enviar entrevista:", error);
-    showMessage(`Erro ao enviar: ${error.message}`, "error");
-  } finally {
-    submitButton.disabled = false;
-    submitButton.textContent = "Enviar";
+    console.error("Fila offline corrompida. Reiniciando fila.", error);
+    localStorage.removeItem(OFFLINE_QUEUE_KEY);
+    return [];
+  }
+}
+
+function savePendingQueue(queue) {
+  localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+}
+
+function saveOfflineResponse(payload) {
+  const queue = getPendingQueue();
+  queue.push({
+    uniqueId: payload.uniqueId,
+    dataHora: payload.dataHora,
+    status: "pendente",
+    payload
+  });
+  savePendingQueue(queue);
+  updatePendingCount();
+}
+
+async function syncPendingResponses() {
+  if (syncInProgress || !navigator.onLine || !API_URL) return;
+
+  let queue = getPendingQueue();
+  if (!queue.length) {
+    updatePendingCount();
+    return;
+  }
+
+  syncInProgress = true;
+  syncNowButton.disabled = true;
+  syncNowButton.textContent = "Sincronizando...";
+
+  const stillPending = [];
+
+  for (const item of queue) {
+    try {
+      const payload = {
+        ...item.payload,
+        origem: "Offline",
+        statusSincronizacao: "Sincronizada"
+      };
+      const response = await apiRequest("submitResponse", payload);
+
+      if (!response.ok) {
+        stillPending.push(item);
+      }
+    } catch (error) {
+      console.error("Falha ao sincronizar pesquisa pendente:", item.uniqueId, error);
+      stillPending.push(item);
+    }
+  }
+
+  savePendingQueue(stillPending);
+  syncInProgress = false;
+  syncNowButton.textContent = "Sincronizar agora";
+  updatePendingCount();
+
+  if (stillPending.length) {
+    showMessage(`${stillPending.length} pesquisa(s) ainda pendente(s). O sistema tentará novamente depois.`, "info");
+  } else {
+    showMessage("Todas as pesquisas pendentes foram sincronizadas.", "success");
   }
 }
 
@@ -164,7 +318,7 @@ async function apiRequest(action, payload) {
   try {
     return await fetchRequest(action, payload);
   } catch (error) {
-    console.warn("Fetch falhou. Tentando JSONP, que evita bloqueios de CORS do Apps Script.", error);
+    console.warn("Fetch falhou. Tentando JSONP.", error);
     return jsonpRequest(action, payload);
   }
 }
@@ -182,13 +336,11 @@ function buildApiUrl(action, payload, callbackName) {
 }
 
 async function fetchRequest(action, payload) {
-  const url = buildApiUrl(action, payload);
-  const response = await fetch(url.toString(), {
+  const response = await fetch(buildApiUrl(action, payload).toString(), {
     method: "GET",
     cache: "no-store",
     redirect: "follow"
   });
-
   const text = await response.text();
 
   if (!response.ok) {
@@ -202,14 +354,12 @@ async function fetchRequest(action, payload) {
   }
 }
 
-// Fallback para quando o navegador bloquear fetch por CORS no Google Apps Script.
 function jsonpRequest(action, payload) {
   return new Promise((resolve, reject) => {
     const callbackName = `dividadosCallback_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
     const script = document.createElement("script");
-    const url = buildApiUrl(action, payload, callbackName);
     const timeoutId = setTimeout(() => {
-      reject(new Error("Tempo esgotado ao chamar a API. Verifique se o Web App esta publicado para qualquer pessoa com o link."));
+      reject(new Error("Tempo esgotado ao chamar a API."));
       cleanup();
     }, 20000);
 
@@ -219,7 +369,7 @@ function jsonpRequest(action, payload) {
     };
 
     script.onerror = () => {
-      reject(new Error("Falha na chamada da API. Confira a URL do Apps Script e a implantacao do Web App."));
+      reject(new Error("Falha na chamada da API."));
       cleanup();
     };
 
@@ -229,7 +379,7 @@ function jsonpRequest(action, payload) {
       script.remove();
     }
 
-    script.src = url.toString();
+    script.src = buildApiUrl(action, payload, callbackName).toString();
     document.body.appendChild(script);
   });
 }
