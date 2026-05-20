@@ -1,7 +1,7 @@
 // Cole somente a URL publicada do seu Google Apps Script entre as aspas.
 // Certo: const API_URL = "https://script.google.com/macros/s/SEU_ID/exec";
 // Errado: const API_URL = "const API_URL = \"https://script.google.com/macros/s/SEU_ID/exec\";";
-const API_URL = "https://script.google.com/macros/s/AKfycbz2-cqG_YPr2CMXXf2lHyZn_qdjCD_w_2apcRLNlfBwnQ79MjMKEIzjJK_eJtEV7H9DUg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycby1iZyydOBfSrNpKPx0HulX3gT-KhfUEaOxxcfCq6JaUyB2UF43dAVtKd9hNxSGOoD7/exec";
 
 const dashboardMessage = document.getElementById("dashboardMessage");
 const refreshButton = document.getElementById("refreshButton");
