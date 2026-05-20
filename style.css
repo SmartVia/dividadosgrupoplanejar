@@ -474,12 +474,75 @@ th {
 }
 
 .question-chart-grid {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 14px;
 }
 
 .question-chart-grid .chart-card {
-  min-height: 300px;
+  min-height: 360px;
+}
+
+.question-result-card {
+  display: grid;
+  gap: 16px;
+}
+
+.question-card-header {
+  display: grid;
+  gap: 6px;
+}
+
+.question-card-header span {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 4px 10px;
+  color: #0f766e;
+  background: #dff5f1;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.question-card-header h3 {
+  line-height: 1.35;
+}
+
+.question-chart-layout {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) 1fr;
+  gap: 18px;
+  align-items: center;
+}
+
+.question-canvas-wrap {
+  height: 220px;
+}
+
+.question-canvas-wrap canvas {
+  height: 220px !important;
+}
+
+.question-legend {
+  display: grid;
+  gap: 10px;
+}
+
+.legend-row {
+  display: grid;
+  grid-template-columns: 12px 1fr;
+  gap: 10px;
+  align-items: center;
+  color: #344054;
+  font-size: 0.92rem;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.empty-question-card {
+  min-height: 160px;
 }
 
 .chart-card h3,
@@ -617,6 +680,10 @@ th {
   .executive-charts,
   .question-chart-grid,
   .insight-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .question-chart-layout {
     grid-template-columns: 1fr;
   }
 

@@ -8,6 +8,12 @@ const printButton = document.getElementById("printButton");
 const clearFiltersButton = document.getElementById("clearFiltersButton");
 const lastUpdated = document.getElementById("lastUpdated");
 const charts = {};
+const QUESTION_COLORS = {
+  A: "#16a34a",
+  B: "#2563eb",
+  C: "#f97316",
+  D: "#7c3aed"
+};
 
 const filters = {
   cidade: document.getElementById("filterCidade"),
@@ -19,7 +25,8 @@ const filters = {
 
 let dashboardData = {
   responses: [],
-  quotas: []
+  quotas: [],
+  questions: []
 };
 
 refreshButton.addEventListener("click", loadDashboard);
@@ -68,7 +75,8 @@ async function loadDashboard() {
       return;
     }
 
-    dashboardData = normalizeDashboardData(data);
+    const questionsResponse = await apiRequest("getQuestions", {});
+    dashboardData = normalizeDashboardData(data, questionsResponse);
 
     if (!dashboardData.responses.length && data.total > 0) {
       showDashboardMessage("Atualize o apps-script.js para a nova versao do dashboard. O endpoint ainda nao esta enviando as respostas detalhadas.", "error");
@@ -88,7 +96,7 @@ async function loadDashboard() {
   }
 }
 
-function normalizeDashboardData(data) {
+function normalizeDashboardData(data, questionsResponse) {
   return {
     responses: (data.responses || []).map((row) => ({
       dataHora: row.DataHora || row.dataHora || "",
@@ -106,8 +114,26 @@ function normalizeDashboardData(data) {
       respostas: parseResponseJson(row.RespostasJson || row.respostasJson || ""),
       respostaAberta: row.RespostaAberta || row.respostaAberta || ""
     })),
-    quotas: data.quotas || []
+    quotas: data.quotas || [],
+    questions: normalizeQuestions(questionsResponse && questionsResponse.ok ? questionsResponse.questions : [])
   };
+}
+
+function normalizeQuestions(questions) {
+  return (questions || [])
+    .filter((question) => normalizeText(question.tipo || "Fechada") !== "aberta")
+    .map((question, index) => ({
+      code: String(question.id || question.ID || `P${index + 1}`).trim().toUpperCase(),
+      text: question.pergunta || question.Pergunta || "",
+      alternatives: {
+        A: question.a || question.A || "",
+        B: question.b || question.B || "",
+        C: question.c || question.C || "",
+        D: question.d || question.D || ""
+      },
+      order: Number(question.ordem || question.Ordem || index + 1)
+    }))
+    .sort((a, b) => a.order - b.order);
 }
 
 function populateFilters() {
@@ -179,9 +205,8 @@ function renderCharts(responses, quotas) {
   createChart("regiaoChart", "regiao", "bar", countBy(responses, "regiao"));
   createChart("cotasStatusChart", "cotasStatus", "pie", countQuotaStatus(quotas));
 
-  ["p1", "p2", "p3", "p4", "p5"].forEach((field) => {
-    createChart(`${field}Chart`, field, "pie", countQuestion(responses, field));
-  });
+  renderQuestionCharts(responses);
+  renderQuestionsSummary(responses);
 }
 
 function createChart(canvasId, chartKey, type, source) {
@@ -230,6 +255,194 @@ function createChart(canvasId, chartKey, type, source) {
       } : {}
     }
   });
+}
+
+function renderQuestionCharts(responses) {
+  const grid = document.getElementById("questionChartsGrid");
+  const questionMeta = getDetectedQuestions(responses);
+
+  Object.keys(charts)
+    .filter((key) => key.startsWith("question_"))
+    .forEach((key) => {
+      charts[key].destroy();
+      delete charts[key];
+    });
+
+  if (!questionMeta.length) {
+    grid.innerHTML = '<article class="chart-card empty-question-card"><h3>Sem respostas ainda</h3><p>Nenhuma pergunta fechada foi encontrada nas respostas sincronizadas.</p></article>';
+    return;
+  }
+
+  grid.innerHTML = questionMeta.map((question) => `
+    <article class="chart-card question-result-card">
+      <div class="question-card-header">
+        <span>${escapeHtml(question.code)}</span>
+        <h3>${escapeHtml(question.text || question.code)}</h3>
+      </div>
+      <div class="question-chart-layout">
+        <div class="question-canvas-wrap">
+          <canvas id="chart_${escapeHtml(question.code)}"></canvas>
+        </div>
+        <div id="legend_${escapeHtml(question.code)}" class="question-legend"></div>
+      </div>
+    </article>
+  `).join("");
+
+  questionMeta.forEach((question) => {
+    const counts = countQuestionByCode(responses, question.code);
+    const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
+    createQuestionChart(question.code, counts);
+    renderQuestionLegend(question, counts, total);
+  });
+}
+
+function getDetectedQuestions(responses) {
+  const fromSheet = dashboardData.questions || [];
+  const detectedCodes = new Set();
+
+  responses.forEach((row) => {
+    (row.respostas || []).forEach((answer, index) => {
+      const code = String(answer.campo || answer.id || `P${index + 1}`).toUpperCase();
+      if (/^P\d+$/.test(code)) detectedCodes.add(code);
+    });
+
+    Object.keys(row).forEach((key) => {
+      if (/^p\d+$/i.test(key) && row[key]) {
+        detectedCodes.add(key.toUpperCase());
+      }
+    });
+  });
+
+  fromSheet.forEach((question) => {
+    if (detectedCodes.has(question.code)) return;
+    if (responses.some((row) => getAnswerForQuestion(row, question.code))) {
+      detectedCodes.add(question.code);
+    }
+  });
+
+  return [...detectedCodes]
+    .sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)))
+    .map((code) => {
+      const sheetQuestion = fromSheet.find((question) => question.code === code);
+      const jsonQuestion = findQuestionFromResponses(responses, code);
+      return sheetQuestion || jsonQuestion || {
+        code,
+        text: code,
+        alternatives: { A: "", B: "", C: "", D: "" },
+        order: Number(code.slice(1))
+      };
+    });
+}
+
+function findQuestionFromResponses(responses, code) {
+  for (const row of responses) {
+    const answer = (row.respostas || []).find((item, index) => {
+      const itemCode = String(item.campo || item.id || `P${index + 1}`).toUpperCase();
+      return itemCode === code;
+    });
+
+    if (answer) {
+      return {
+        code,
+        text: answer.pergunta || code,
+        alternatives: { A: "", B: "", C: "", D: "" },
+        order: Number(code.slice(1))
+      };
+    }
+  }
+
+  return null;
+}
+
+function createQuestionChart(code, counts) {
+  const canvas = document.getElementById(`chart_${code}`);
+  if (!canvas) return;
+
+  charts[`question_${code}`] = new Chart(canvas, {
+    type: "doughnut",
+    data: {
+      labels: ["A", "B", "C", "D"],
+      datasets: [{
+        data: ["A", "B", "C", "D"].map((key) => counts[key] || 0),
+        backgroundColor: ["A", "B", "C", "D"].map((key) => QUESTION_COLORS[key]),
+        borderColor: "#ffffff",
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: "58%",
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+}
+
+function renderQuestionLegend(question, counts, total) {
+  const container = document.getElementById(`legend_${question.code}`);
+  if (!container) return;
+
+  if (!total) {
+    container.innerHTML = '<p class="muted-text">Sem respostas ainda</p>';
+    return;
+  }
+
+  container.innerHTML = ["A", "B", "C", "D"].map((key) => {
+    const count = counts[key] || 0;
+    const percent = total ? Math.round((count / total) * 100) : 0;
+    const text = question.alternatives[key] || key;
+    return `
+      <div class="legend-row">
+        <span class="legend-color" style="background:${QUESTION_COLORS[key]}"></span>
+        <span><strong>${key}</strong> — ${escapeHtml(text)} — ${percent}% (${count} votos)</span>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderQuestionsSummary(responses) {
+  const tableBody = document.getElementById("questionsSummaryTableBody");
+  const questions = getDetectedQuestions(responses);
+
+  if (!questions.length) {
+    tableBody.innerHTML = '<tr><td colspan="7">Sem respostas ainda.</td></tr>';
+    return;
+  }
+
+  tableBody.innerHTML = questions.map((question) => {
+    const counts = countQuestionByCode(responses, question.code);
+    const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
+    const winner = getWinner(question, counts);
+
+    return `
+      <tr>
+        <td><strong>${escapeHtml(question.code)}</strong><br><span class="muted-text">${escapeHtml(question.text || question.code)}</span></td>
+        <td>${formatSummaryCell("A", question, counts, total)}</td>
+        <td>${formatSummaryCell("B", question, counts, total)}</td>
+        <td>${formatSummaryCell("C", question, counts, total)}</td>
+        <td>${formatSummaryCell("D", question, counts, total)}</td>
+        <td>${total}</td>
+        <td>${winner}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function formatSummaryCell(key, question, counts, total) {
+  const count = counts[key] || 0;
+  const percent = total ? Math.round((count / total) * 100) : 0;
+  const text = question.alternatives[key] || key;
+  return `${escapeHtml(text)}<br><strong>${percent}% (${count})</strong>`;
+}
+
+function getWinner(question, counts) {
+  const entries = Object.entries(counts);
+  const winner = entries.sort((a, b) => b[1] - a[1])[0];
+  if (!winner || winner[1] === 0) return "Sem respostas";
+  const text = question.alternatives[winner[0]] || winner[0];
+  return `${winner[0]} — ${escapeHtml(text)} (${winner[1]})`;
 }
 
 function renderOpenAnswers(responses) {
@@ -339,6 +552,28 @@ function countQuestion(rows, field) {
     }
   });
   return base;
+}
+
+function countQuestionByCode(rows, code) {
+  const counts = { A: 0, B: 0, C: 0, D: 0 };
+
+  rows.forEach((row) => {
+    const answer = String(getAnswerForQuestion(row, code) || "").trim().toUpperCase();
+    if (counts[answer] !== undefined) {
+      counts[answer] += 1;
+    }
+  });
+
+  return counts;
+}
+
+function getAnswerForQuestion(row, code) {
+  const field = code.toLowerCase();
+  if (row[field]) return row[field];
+
+  const index = Number(code.slice(1)) - 1;
+  const answer = row.respostas && row.respostas[index] ? row.respostas[index].resposta : "";
+  return answer || "";
 }
 
 function parseResponseJson(value) {

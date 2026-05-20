@@ -134,27 +134,36 @@
         </div>
       </div>
 
-      <div class="chart-grid question-chart-grid">
+      <div id="questionChartsGrid" class="chart-grid question-chart-grid">
         <article class="chart-card">
-          <h3>P1</h3>
-          <canvas id="p1Chart"></canvas>
+          <h3>Carregando perguntas...</h3>
         </article>
-        <article class="chart-card">
-          <h3>P2</h3>
-          <canvas id="p2Chart"></canvas>
-        </article>
-        <article class="chart-card">
-          <h3>P3</h3>
-          <canvas id="p3Chart"></canvas>
-        </article>
-        <article class="chart-card">
-          <h3>P4</h3>
-          <canvas id="p4Chart"></canvas>
-        </article>
-        <article class="chart-card">
-          <h3>P5</h3>
-          <canvas id="p5Chart"></canvas>
-        </article>
+      </div>
+
+      <div class="table-section embedded-table">
+        <div class="section-title-row">
+          <h3>Resumo das Perguntas Fechadas</h3>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Pergunta</th>
+                <th>Alternativa A</th>
+                <th>Alternativa B</th>
+                <th>Alternativa C</th>
+                <th>Alternativa D</th>
+                <th>Total de respostas</th>
+                <th>Alternativa mais votada</th>
+              </tr>
+            </thead>
+            <tbody id="questionsSummaryTableBody">
+              <tr>
+                <td colspan="7">Carregando resumo...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
 
@@ -240,6 +249,6 @@
     </section>
   </main>
 
-  <script src="dashboard.js?v=3"></script>
+  <script src="dashboard.js?v=4"></script>
 </body>
 </html>
