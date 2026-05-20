@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --bg: #f4f6f8;
   --surface: #ffffff;
   --text: #17202a;
@@ -1046,10 +1046,15 @@ td {
   }
 
   .dashboard-shell {
+    display: none !important;
+  }
+
+  .print-report {
+    display: block !important;
     width: 100% !important;
     max-width: none !important;
-    padding: 0;
-    margin: 0 auto;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   .print-title {
@@ -1062,6 +1067,188 @@ td {
     padding: 0 0 5mm;
     border-top: 4px solid #0f766e;
     border-bottom: 1px solid #cfd8e3;
+  }
+
+  .print-page {
+    width: 100%;
+    min-height: 277mm;
+    page-break-after: always;
+    break-after: page;
+    box-sizing: border-box;
+  }
+
+  .print-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  .avoid-break,
+  .print-chart-card,
+  .print-question-card,
+  .summary-card,
+  .open-answer-card,
+  .print-table-block {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-cover {
+    display: grid;
+    align-content: start;
+    gap: 7mm;
+  }
+
+  .print-cover-header {
+    padding: 9mm 0 6mm;
+    border-bottom: 3px solid #0f766e;
+  }
+
+  .print-cover-header h1 {
+    margin: 2mm 0;
+    color: #0b1220;
+    font-size: 24pt;
+  }
+
+  .print-cover-header p:last-child {
+    margin: 0;
+    color: #667085;
+    font-size: 11pt;
+  }
+
+  .print-cover-meta,
+  .print-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4mm;
+  }
+
+  .print-cover-meta div,
+  .summary-card {
+    border: 1px solid #d7dde6;
+    border-radius: 6px;
+    padding: 4mm;
+    background: #f8fafc;
+  }
+
+  .print-cover-meta span,
+  .summary-card span {
+    display: block;
+    color: #667085;
+    font-size: 8pt;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .print-cover-meta strong,
+  .summary-card strong {
+    display: block;
+    margin-top: 2mm;
+    color: #0f172a;
+    font-size: 20pt;
+    line-height: 1;
+  }
+
+  .print-section-header {
+    margin-bottom: 5mm;
+    padding-bottom: 3mm;
+    border-bottom: 2px solid #0f766e;
+  }
+
+  .print-section-header h1 {
+    color: #0b1220;
+    font-size: 18pt;
+  }
+
+  .print-grid-2 {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6mm;
+  }
+
+  .print-chart-card,
+  .print-question-card,
+  .open-answer-card,
+  .print-table-block {
+    border: 1px solid #d7dde6;
+    border-radius: 6px;
+    padding: 5mm;
+    background: #fff;
+  }
+
+  .print-chart-card h2,
+  .print-question-card h2,
+  .open-answer-card h2,
+  .print-table-block h2 {
+    margin: 0 0 3mm;
+    color: #111827;
+    font-size: 11pt;
+  }
+
+  .print-pie-wrap,
+  .print-bar-wrap {
+    display: grid;
+    place-items: center;
+  }
+
+  .print-pie-wrap canvas {
+    width: 220px !important;
+    height: 220px !important;
+  }
+
+  .print-bar-wrap canvas {
+    width: 100% !important;
+    max-width: 520px !important;
+    height: 230px !important;
+  }
+
+  .print-question-layout {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 4mm;
+    align-items: center;
+  }
+
+  .print-open-list {
+    display: grid;
+    gap: 6mm;
+  }
+
+  .print-open-layout {
+    display: grid;
+    grid-template-columns: 1.25fr 0.75fr;
+    gap: 5mm;
+  }
+
+  .print-open-responses {
+    display: grid;
+    gap: 3mm;
+  }
+
+  .print-open-responses > div {
+    border: 1px solid #e4e9f0;
+    border-radius: 5px;
+    padding: 3mm;
+    background: #f8fafc;
+  }
+
+  .print-open-responses p {
+    margin: 1.5mm 0;
+  }
+
+  .print-open-analysis {
+    border-left: 1px solid #e4e9f0;
+    padding-left: 4mm;
+  }
+
+  .print-open-analysis h3 {
+    margin: 0 0 2mm;
+    font-size: 9pt;
+  }
+
+  .print-empty {
+    margin: 0;
+    color: #667085;
+    font-weight: 800;
   }
 
   .print-title,
@@ -1315,3 +1502,4 @@ td {
     content: "";
   }
 }
+

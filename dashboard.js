@@ -33,7 +33,8 @@ let printMode = false;
 
 refreshButton.addEventListener("click", loadDashboard);
 printButton.addEventListener("click", async () => {
-  window.open("relatorio.html", "_blank", "noopener");
+  await preparePrintMode();
+  window.print();
 });
 clearFiltersButton.addEventListener("click", clearFilters);
 window.addEventListener("beforeprint", () => {
