@@ -1,6 +1,7 @@
-// Cole aqui a URL publicada do seu Google Apps Script.
-// Exemplo: const API_URL = "https://script.google.com/macros/s/SEU_ID/exec";
-const API_URL = "const API_URL = "https://script.google.com/macros/s/AKfycbxxxxxxxxxxxxxxxx/exec";";
+// Cole somente a URL publicada do seu Google Apps Script entre as aspas.
+// Certo: const API_URL = "https://script.google.com/macros/s/SEU_ID/exec";
+// Errado: const API_URL = "const API_URL = \"https://script.google.com/macros/s/SEU_ID/exec\";";
+const API_URL = "https://script.google.com/macros/s/AKfycbz2-cqG_YPr2CMXXf2lHyZn_qdjCD_w_2apcRLNlfBwnQ79MjMKEIzjJK_eJtEV7H9DUg/exec";
 
 const form = document.getElementById("surveyForm");
 const messageBox = document.getElementById("message");
@@ -10,8 +11,18 @@ const submitButton = document.getElementById("submitButton");
 
 let quotaIsOpen = false;
 
-checkQuotaButton.addEventListener("click", checkQuota);
-form.addEventListener("submit", submitSurvey);
+if (!checkQuotaButton) {
+  console.error("Botao #checkQuotaButton nao encontrado no HTML.");
+} else {
+  checkQuotaButton.addEventListener("click", checkQuota);
+}
+
+if (!form) {
+  console.error("Formulario #surveyForm nao encontrado no HTML.");
+} else {
+  form.addEventListener("submit", submitSurvey);
+}
+
 document.getElementById("sexo").addEventListener("change", closeQuestions);
 document.getElementById("faixaEtaria").addEventListener("change", closeQuestions);
 
@@ -55,7 +66,8 @@ async function checkQuota() {
   clearMessage();
 
   if (!API_URL) {
-    showMessage("Configure a constante API_URL no arquivo script.js antes de usar o formulário.", "error");
+    showMessage("Configure a constante API_URL no arquivo script.js antes de usar o formulario.", "error");
+    console.error("API_URL esta vazia. Cole a URL publicada do Google Apps Script em script.js.");
     return;
   }
 
@@ -64,6 +76,7 @@ async function checkQuota() {
 
   checkQuotaButton.disabled = true;
   checkQuotaButton.textContent = "Verificando...";
+  showMessage("Verificando...", "info");
 
   try {
     const response = await apiRequest("checkQuota", {
@@ -71,16 +84,22 @@ async function checkQuota() {
       faixaEtaria: profile.faixaEtaria
     });
 
+    console.log("Resposta checkQuota:", response);
+
     if (response.ok && response.open) {
       quotaIsOpen = true;
       questionsSection.classList.remove("hidden");
       showMessage(`Cota aberta. Restam ${response.restante} entrevista(s) para este perfil.`, "success");
-    } else {
-      closeQuestions();
-      showMessage("Cota encerrada para este perfil. Procure outro entrevistado.", "error");
+      return;
     }
+
+    closeQuestions();
+    showMessage(response.message || "Cota encerrada para este perfil. Procure outro entrevistado.", "error");
+    console.warn("Cota fechada ou nao encontrada:", response);
   } catch (error) {
-    showMessage("Não foi possível verificar a cota. Confira a URL da API e sua conexão.", "error");
+    closeQuestions();
+    console.error("Erro ao verificar cota:", error);
+    showMessage(`Erro ao verificar cota: ${error.message}`, "error");
   } finally {
     checkQuotaButton.disabled = false;
     checkQuotaButton.textContent = "Verificar cota";
@@ -114,9 +133,11 @@ async function submitSurvey(event) {
 
   submitButton.disabled = true;
   submitButton.textContent = "Enviando...";
+  showMessage("Enviando resposta...", "info");
 
   try {
     const response = await apiRequest("submitResponse", payload);
+    console.log("Resposta submitResponse:", response);
 
     if (response.ok) {
       showMessage("Entrevista salva com sucesso.", "success");
@@ -127,26 +148,70 @@ async function submitSurvey(event) {
       closeQuestions();
       showMessage("Cota encerrada para este perfil. Procure outro entrevistado.", "error");
     } else {
-      showMessage(response.message || "Não foi possível salvar a entrevista.", "error");
+      console.warn("Resposta da API ao salvar:", response);
+      showMessage(response.message || "Nao foi possivel salvar a entrevista.", "error");
     }
   } catch (error) {
-    showMessage("Erro ao enviar. Tente novamente em alguns instantes.", "error");
+    console.error("Erro ao enviar entrevista:", error);
+    showMessage(`Erro ao enviar: ${error.message}`, "error");
   } finally {
     submitButton.disabled = false;
     submitButton.textContent = "Enviar";
   }
 }
 
-// JSONP evita problemas de CORS ao usar GitHub Pages com Google Apps Script.
-function apiRequest(action, payload) {
+async function apiRequest(action, payload) {
+  try {
+    return await fetchRequest(action, payload);
+  } catch (error) {
+    console.warn("Fetch falhou. Tentando JSONP, que evita bloqueios de CORS do Apps Script.", error);
+    return jsonpRequest(action, payload);
+  }
+}
+
+function buildApiUrl(action, payload, callbackName) {
+  const url = new URL(API_URL);
+  url.searchParams.set("action", action);
+  url.searchParams.set("payload", JSON.stringify(payload || {}));
+
+  if (callbackName) {
+    url.searchParams.set("callback", callbackName);
+  }
+
+  return url;
+}
+
+async function fetchRequest(action, payload) {
+  const url = buildApiUrl(action, payload);
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    cache: "no-store",
+    redirect: "follow"
+  });
+
+  const text = await response.text();
+
+  if (!response.ok) {
+    throw new Error(`API retornou HTTP ${response.status}: ${text.slice(0, 120)}`);
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw new Error(`A API nao retornou JSON valido. Retorno recebido: ${text.slice(0, 160)}`);
+  }
+}
+
+// Fallback para quando o navegador bloquear fetch por CORS no Google Apps Script.
+function jsonpRequest(action, payload) {
   return new Promise((resolve, reject) => {
     const callbackName = `dividadosCallback_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
     const script = document.createElement("script");
-    const url = new URL(API_URL);
-
-    url.searchParams.set("action", action);
-    url.searchParams.set("payload", JSON.stringify(payload || {}));
-    url.searchParams.set("callback", callbackName);
+    const url = buildApiUrl(action, payload, callbackName);
+    const timeoutId = setTimeout(() => {
+      reject(new Error("Tempo esgotado ao chamar a API. Verifique se o Web App esta publicado para qualquer pessoa com o link."));
+      cleanup();
+    }, 20000);
 
     window[callbackName] = (data) => {
       resolve(data);
@@ -154,11 +219,12 @@ function apiRequest(action, payload) {
     };
 
     script.onerror = () => {
-      reject(new Error("Falha na chamada da API"));
+      reject(new Error("Falha na chamada da API. Confira a URL do Apps Script e a implantacao do Web App."));
       cleanup();
     };
 
     function cleanup() {
+      clearTimeout(timeoutId);
       delete window[callbackName];
       script.remove();
     }

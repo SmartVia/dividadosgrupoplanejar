@@ -1,6 +1,7 @@
-// Cole aqui a URL publicada do seu Google Apps Script.
-// Exemplo: const API_URL = "https://script.google.com/macros/s/SEU_ID/exec";
-const API_URL = "";
+// Cole somente a URL publicada do seu Google Apps Script entre as aspas.
+// Certo: const API_URL = "https://script.google.com/macros/s/SEU_ID/exec";
+// Errado: const API_URL = "const API_URL = \"https://script.google.com/macros/s/SEU_ID/exec\";";
+const API_URL = "https://script.google.com/macros/s/AKfycbz2-cqG_YPr2CMXXf2lHyZn_qdjCD_w_2apcRLNlfBwnQ79MjMKEIzjJK_eJtEV7H9DUg/exec";
 
 const dashboardMessage = document.getElementById("dashboardMessage");
 const refreshButton = document.getElementById("refreshButton");
@@ -25,6 +26,7 @@ async function loadDashboard() {
 
   if (!API_URL) {
     showDashboardMessage("Configure a constante API_URL no arquivo dashboard.js antes de carregar o dashboard.", "error");
+    console.error("API_URL esta vazia. Cole a URL publicada do Google Apps Script em dashboard.js.");
     return;
   }
 
@@ -33,9 +35,11 @@ async function loadDashboard() {
 
   try {
     const data = await apiRequest("dashboard", {});
+    console.log("Resposta dashboard:", data);
 
     if (!data.ok) {
-      showDashboardMessage(data.message || "Não foi possível carregar os dados.", "error");
+      console.warn("Erro retornado pela API do dashboard:", data);
+      showDashboardMessage(data.message || "Nao foi possivel carregar os dados.", "error");
       return;
     }
 
@@ -44,7 +48,8 @@ async function loadDashboard() {
     renderQuotas(data.quotas || []);
     showDashboardMessage("Dados atualizados com sucesso.", "success");
   } catch (error) {
-    showDashboardMessage("Erro ao buscar dados. Confira a URL da API e sua conexão.", "error");
+    console.error("Erro ao buscar dados do dashboard:", error);
+    showDashboardMessage(`Erro ao buscar dados: ${error.message}`, "error");
   } finally {
     refreshButton.disabled = false;
     refreshButton.textContent = "Atualizar dados";
@@ -140,16 +145,58 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-// JSONP evita problemas de CORS ao usar GitHub Pages com Google Apps Script.
-function apiRequest(action, payload) {
+async function apiRequest(action, payload) {
+  try {
+    return await fetchRequest(action, payload);
+  } catch (error) {
+    console.warn("Fetch falhou. Tentando JSONP, que evita bloqueios de CORS do Apps Script.", error);
+    return jsonpRequest(action, payload);
+  }
+}
+
+function buildApiUrl(action, payload, callbackName) {
+  const url = new URL(API_URL);
+  url.searchParams.set("action", action);
+  url.searchParams.set("payload", JSON.stringify(payload || {}));
+
+  if (callbackName) {
+    url.searchParams.set("callback", callbackName);
+  }
+
+  return url;
+}
+
+async function fetchRequest(action, payload) {
+  const url = buildApiUrl(action, payload);
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    cache: "no-store",
+    redirect: "follow"
+  });
+
+  const text = await response.text();
+
+  if (!response.ok) {
+    throw new Error(`API retornou HTTP ${response.status}: ${text.slice(0, 120)}`);
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw new Error(`A API nao retornou JSON valido. Retorno recebido: ${text.slice(0, 160)}`);
+  }
+}
+
+// Fallback para quando o navegador bloquear fetch por CORS no Google Apps Script.
+function jsonpRequest(action, payload) {
   return new Promise((resolve, reject) => {
     const callbackName = `dividadosDashboard_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
     const script = document.createElement("script");
-    const url = new URL(API_URL);
-
-    url.searchParams.set("action", action);
-    url.searchParams.set("payload", JSON.stringify(payload || {}));
-    url.searchParams.set("callback", callbackName);
+    const url = buildApiUrl(action, payload, callbackName);
+    const timeoutId = setTimeout(() => {
+      reject(new Error("Tempo esgotado ao chamar a API. Verifique se o Web App esta publicado para qualquer pessoa com o link."));
+      cleanup();
+    }, 20000);
 
     window[callbackName] = (data) => {
       resolve(data);
@@ -157,11 +204,12 @@ function apiRequest(action, payload) {
     };
 
     script.onerror = () => {
-      reject(new Error("Falha na chamada da API"));
+      reject(new Error("Falha na chamada da API. Confira a URL do Apps Script e a implantacao do Web App."));
       cleanup();
     };
 
     function cleanup() {
+      clearTimeout(timeoutId);
       delete window[callbackName];
       script.remove();
     }

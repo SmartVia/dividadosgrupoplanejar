@@ -4,7 +4,7 @@
   Como usar:
   1. Crie uma planilha Google Sheets com as abas:
      Respostas, Cotas, Pesquisadores e Perguntas.
-  2. Na aba Cotas, use as colunas:
+  2. Na aba Cotas, use exatamente estas colunas na primeira linha:
      Sexo, FaixaEtaria, Meta, Realizado, Restante, Status
   3. Cole o ID da planilha na constante SPREADSHEET_ID abaixo.
      O ID fica na URL da planilha, entre /d/ e /edit.
@@ -22,6 +22,8 @@ const SHEETS = {
   researchers: "Pesquisadores",
   questions: "Perguntas"
 };
+
+const QUOTA_HEADERS = ["Sexo", "FaixaEtaria", "Meta", "Realizado", "Restante", "Status"];
 
 const RESPONSE_HEADERS = [
   "DataHora",
@@ -48,12 +50,14 @@ function doPost(e) {
 }
 
 function handleRequest_(e) {
-  const action = e.parameter.action;
-  const callback = e.parameter.callback;
-  const payload = parsePayload_(e);
+  const callback = e && e.parameter ? e.parameter.callback : "";
   let result;
 
   try {
+    const request = parseRequest_(e);
+    const action = request.action;
+    const payload = request.payload;
+
     if (action === "checkQuota") {
       result = checkQuota_(payload);
     } else if (action === "submitResponse") {
@@ -61,68 +65,101 @@ function handleRequest_(e) {
     } else if (action === "dashboard") {
       result = getDashboardData_();
     } else {
-      result = { ok: false, message: "Ação inválida." };
+      result = { ok: false, error: "invalid_action", message: "Ação inválida ou não informada." };
     }
   } catch (error) {
-    result = { ok: false, message: error.message || "Erro interno na API." };
+    result = {
+      ok: false,
+      error: "server_error",
+      message: error.message || "Erro interno na API."
+    };
   }
 
   return output_(result, callback);
 }
 
-function parsePayload_(e) {
-  if (e.parameter.payload) {
-    return JSON.parse(e.parameter.payload);
+function parseRequest_(e) {
+  const params = e && e.parameter ? e.parameter : {};
+  let body = {};
+
+  if (params.payload) {
+    body = JSON.parse(params.payload);
+  } else if (e && e.postData && e.postData.contents) {
+    body = JSON.parse(e.postData.contents);
   }
 
-  if (e.postData && e.postData.contents) {
-    return JSON.parse(e.postData.contents);
-  }
-
-  return {};
+  return {
+    action: params.action || body.action || "",
+    payload: body.payload || body || {}
+  };
 }
 
 function output_(data, callback) {
   const json = JSON.stringify(data);
-  const content = callback ? `${callback}(${json});` : json;
-  const mimeType = callback ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON;
+
+  if (callback) {
+    const safeCallback = String(callback).replace(/[^\w.$]/g, "");
+    return ContentService
+      .createTextOutput(`${safeCallback}(${json});`)
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
 
   return ContentService
-    .createTextOutput(content)
-    .setMimeType(mimeType);
+    .createTextOutput(json)
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 function checkQuota_(payload) {
-  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const quotasSheet = spreadsheet.getSheetByName(SHEETS.quotas);
+  validateRequiredProfile_(payload);
+
+  const spreadsheet = getSpreadsheet_();
+  const quotasSheet = getRequiredSheet_(spreadsheet, SHEETS.quotas);
   const quota = findQuota_(quotasSheet, payload.sexo, payload.faixaEtaria);
 
   if (!quota) {
-    return { ok: false, open: false, error: "quota_not_found", message: "Cota não encontrada." };
+    return {
+      ok: false,
+      open: false,
+      error: "quota_not_found",
+      message: "Cota não encontrada para este perfil. Confira Sexo e FaixaEtaria na aba Cotas."
+    };
+  }
+
+  if (!isQuotaOpen_(quota)) {
+    return {
+      ok: true,
+      open: false,
+      restante: quota.restante,
+      status: quota.status,
+      message: "Cota encerrada para este perfil. Procure outro entrevistado."
+    };
   }
 
   return {
     ok: true,
-    open: quota.restante > 0 && quota.status === "Aberta",
+    open: true,
     restante: quota.restante,
-    status: quota.status
+    status: quota.status,
+    message: "Cota aberta."
   };
 }
 
 function submitResponse_(payload) {
+  validateRequiredResponse_(payload);
+
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
 
   try {
-    const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
-    const responsesSheet = spreadsheet.getSheetByName(SHEETS.responses);
-    const quotasSheet = spreadsheet.getSheetByName(SHEETS.quotas);
+    const spreadsheet = getSpreadsheet_();
+    const responsesSheet = getRequiredSheet_(spreadsheet, SHEETS.responses);
+    const quotasSheet = getRequiredSheet_(spreadsheet, SHEETS.quotas);
 
     ensureResponseHeaders_(responsesSheet);
 
     const quota = findQuota_(quotasSheet, payload.sexo, payload.faixaEtaria);
 
-    if (!quota || quota.restante <= 0 || quota.status !== "Aberta") {
+    if (!quota || !isQuotaOpen_(quota)) {
       return {
         ok: false,
         error: "quota_closed",
@@ -161,9 +198,9 @@ function submitResponse_(payload) {
 }
 
 function getDashboardData_() {
-  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const responsesSheet = spreadsheet.getSheetByName(SHEETS.responses);
-  const quotasSheet = spreadsheet.getSheetByName(SHEETS.quotas);
+  const spreadsheet = getSpreadsheet_();
+  const responsesSheet = getRequiredSheet_(spreadsheet, SHEETS.responses);
+  const quotasSheet = getRequiredSheet_(spreadsheet, SHEETS.quotas);
   const responses = getSheetObjects_(responsesSheet);
   const quotas = getSheetObjects_(quotasSheet).map(function(row) {
     return {
@@ -187,19 +224,43 @@ function getDashboardData_() {
   };
 }
 
+function getSpreadsheet_() {
+  if (!SPREADSHEET_ID || SPREADSHEET_ID === "COLE_AQUI_O_ID_DA_SUA_PLANILHA") {
+    throw new Error("Configure SPREADSHEET_ID no Apps Script com o ID da sua planilha.");
+  }
+
+  return SpreadsheetApp.openById(SPREADSHEET_ID);
+}
+
+function getRequiredSheet_(spreadsheet, sheetName) {
+  const sheet = spreadsheet.getSheetByName(sheetName);
+
+  if (!sheet) {
+    throw new Error(`Aba "${sheetName}" não encontrada. Crie as abas: Respostas, Cotas, Pesquisadores e Perguntas.`);
+  }
+
+  return sheet;
+}
+
 function findQuota_(sheet, sexo, faixaEtaria) {
   const values = sheet.getDataRange().getValues();
   if (values.length < 2) return null;
 
-  const headers = values[0];
+  const headers = values[0].map(function(header) {
+    return String(header).trim();
+  });
   const columns = getColumnMap_(headers);
+  validateColumns_(columns, QUOTA_HEADERS, SHEETS.quotas);
+
+  const searchedSexo = normalizeText_(sexo);
+  const searchedFaixa = normalizeText_(faixaEtaria);
 
   for (let i = 1; i < values.length; i++) {
     const row = values[i];
-    const rowSexo = String(row[columns.Sexo - 1]).trim();
-    const rowFaixa = String(row[columns.FaixaEtaria - 1]).trim();
+    const rowSexo = normalizeText_(row[columns.Sexo - 1]);
+    const rowFaixa = normalizeText_(row[columns.FaixaEtaria - 1]);
 
-    if (rowSexo === sexo && rowFaixa === faixaEtaria) {
+    if (rowSexo === searchedSexo && rowFaixa === searchedFaixa) {
       const meta = Number(row[columns.Meta - 1]) || 0;
       const realizado = Number(row[columns.Realizado - 1]) || 0;
       const restanteCell = row[columns.Restante - 1];
@@ -209,8 +270,8 @@ function findQuota_(sheet, sexo, faixaEtaria) {
       return {
         row: i + 1,
         columns: columns,
-        sexo: rowSexo,
-        faixaEtaria: rowFaixa,
+        sexo: row[columns.Sexo - 1],
+        faixaEtaria: row[columns.FaixaEtaria - 1],
         meta: meta,
         realizado: realizado,
         restante: restante,
@@ -222,11 +283,46 @@ function findQuota_(sheet, sexo, faixaEtaria) {
   return null;
 }
 
+function isQuotaOpen_(quota) {
+  return quota.restante > 0 && normalizeText_(quota.status) === "aberta";
+}
+
+function validateRequiredProfile_(payload) {
+  if (!payload || !payload.sexo || !payload.faixaEtaria) {
+    throw new Error("Dados incompletos para verificar cota: envie sexo e faixaEtaria.");
+  }
+}
+
+function validateRequiredResponse_(payload) {
+  validateRequiredProfile_(payload);
+
+  const requiredFields = ["pesquisador", "cidade", "regiao", "endereco", "p1", "p2", "p3", "p4", "p5"];
+  const missing = requiredFields.filter(function(field) {
+    return !payload[field];
+  });
+
+  if (missing.length) {
+    throw new Error(`Dados incompletos para salvar resposta. Campos faltando: ${missing.join(", ")}.`);
+  }
+}
+
+function validateColumns_(columns, requiredHeaders, sheetName) {
+  const missing = requiredHeaders.filter(function(header) {
+    return !columns[header];
+  });
+
+  if (missing.length) {
+    throw new Error(`Colunas faltando na aba "${sheetName}": ${missing.join(", ")}.`);
+  }
+}
+
 function getSheetObjects_(sheet) {
   const values = sheet.getDataRange().getValues();
   if (values.length < 2) return [];
 
-  const headers = values[0];
+  const headers = values[0].map(function(header) {
+    return String(header).trim();
+  });
   const rows = [];
 
   for (let i = 1; i < values.length; i++) {
@@ -254,9 +350,13 @@ function countBy_(rows, field) {
 
 function getColumnMap_(headers) {
   return headers.reduce(function(map, header, index) {
-    map[String(header).trim()] = index + 1;
+    map[header] = index + 1;
     return map;
   }, {});
+}
+
+function normalizeText_(value) {
+  return String(value || "").trim().toLowerCase();
 }
 
 function ensureResponseHeaders_(sheet) {
