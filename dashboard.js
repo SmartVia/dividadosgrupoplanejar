@@ -28,14 +28,16 @@ let dashboardData = {
   quotas: [],
   questions: []
 };
+let printMode = false;
 
 refreshButton.addEventListener("click", loadDashboard);
 printButton.addEventListener("click", () => {
-  updatePrintHeader();
+  preparePrintMode();
   window.print();
 });
 clearFiltersButton.addEventListener("click", clearFilters);
-window.addEventListener("beforeprint", updatePrintHeader);
+window.addEventListener("beforeprint", preparePrintMode);
+window.addEventListener("afterprint", restoreScreenMode);
 
 Object.values(filters).forEach((filter) => {
   filter.addEventListener("change", renderDashboard);
@@ -304,6 +306,17 @@ function renderMetrics(responses, quotas) {
   document.getElementById("cotasFechadas").textContent = closedQuotas;
 }
 
+function preparePrintMode() {
+  printMode = true;
+  updatePrintHeader();
+  renderCharts(getFilteredResponses(), dashboardData.quotas);
+}
+
+function restoreScreenMode() {
+  printMode = false;
+  renderCharts(getFilteredResponses(), dashboardData.quotas);
+}
+
 function updatePrintHeader() {
   const responses = getFilteredResponses();
   const cidade = filters.cidade.value || "Todas";
@@ -352,6 +365,8 @@ function createChart(canvasId, chartKey, type, source) {
       responsive: true,
       maintainAspectRatio: true,
       aspectRatio: type === "bar" ? 1.65 : 1,
+      devicePixelRatio: getChartPixelRatio(),
+      animation: false,
       plugins: {
         legend: {
           display: type !== "bar",
@@ -500,12 +515,19 @@ function createQuestionChart(code, counts) {
       responsive: true,
       maintainAspectRatio: true,
       aspectRatio: 1,
+      devicePixelRatio: getChartPixelRatio(),
+      animation: false,
       cutout: "58%",
       plugins: {
         legend: { display: false }
       }
     }
   });
+}
+
+function getChartPixelRatio() {
+  const base = window.devicePixelRatio || 1;
+  return printMode ? 4 : Math.max(base, 2);
 }
 
 function renderQuestionLegend(question, counts, total) {
