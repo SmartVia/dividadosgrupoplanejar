@@ -23,8 +23,24 @@
     </header>
 
     <section class="print-title print-only">
-      <h1>Dividados Pesquisa</h1>
-      <p>Relatório executivo de resultados</p>
+      <div>
+        <p class="eyebrow">DIVIDADOS PESQUISA</p>
+        <h1>Relatório Executivo de Pesquisa</h1>
+      </div>
+      <dl class="print-meta">
+        <div>
+          <dt>Cidade</dt>
+          <dd id="printCidade">Todas</dd>
+        </div>
+        <div>
+          <dt>Data</dt>
+          <dd id="printData">--/--/----</dd>
+        </div>
+        <div>
+          <dt>Total de entrevistas</dt>
+          <dd id="printTotalEntrevistas">0</dd>
+        </div>
+      </dl>
     </section>
 
     <div id="dashboardMessage" class="message no-print" hidden></div>
@@ -105,23 +121,33 @@
       <div class="chart-grid executive-charts">
         <article class="chart-card">
           <h3>Sexo</h3>
-          <canvas id="sexoChart"></canvas>
+          <div class="chart-visual pie-visual">
+            <canvas id="sexoChart"></canvas>
+          </div>
         </article>
         <article class="chart-card">
           <h3>Faixa etária</h3>
-          <canvas id="faixaChart"></canvas>
+          <div class="chart-visual bar-visual">
+            <canvas id="faixaChart"></canvas>
+          </div>
         </article>
         <article class="chart-card">
           <h3>Cidade</h3>
-          <canvas id="cidadeChart"></canvas>
+          <div class="chart-visual bar-visual">
+            <canvas id="cidadeChart"></canvas>
+          </div>
         </article>
         <article class="chart-card">
           <h3>Região/Bairro</h3>
-          <canvas id="regiaoChart"></canvas>
+          <div class="chart-visual bar-visual">
+            <canvas id="regiaoChart"></canvas>
+          </div>
         </article>
         <article class="chart-card">
           <h3>Status das cotas</h3>
-          <canvas id="cotasStatusChart"></canvas>
+          <div class="chart-visual pie-visual">
+            <canvas id="cotasStatusChart"></canvas>
+          </div>
         </article>
       </div>
     </section>
@@ -243,6 +269,8 @@
     </section>
   </main>
 
-  <script src="dashboard.js?v=8"></script>
+  <div class="print-footer print-only">Página <span class="page-number"></span></div>
+
+  <script src="dashboard.js?v=9"></script>
 </body>
 </html>

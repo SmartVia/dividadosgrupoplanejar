@@ -30,8 +30,12 @@ let dashboardData = {
 };
 
 refreshButton.addEventListener("click", loadDashboard);
-printButton.addEventListener("click", () => window.print());
+printButton.addEventListener("click", () => {
+  updatePrintHeader();
+  window.print();
+});
 clearFiltersButton.addEventListener("click", clearFilters);
+window.addEventListener("beforeprint", updatePrintHeader);
 
 Object.values(filters).forEach((filter) => {
   filter.addEventListener("change", renderDashboard);
@@ -284,6 +288,7 @@ function renderDashboard() {
   renderCharts(responses, dashboardData.quotas);
   renderOpenAnswers(responses);
   renderQuotas(dashboardData.quotas);
+  updatePrintHeader();
 }
 
 function renderMetrics(responses, quotas) {
@@ -297,6 +302,18 @@ function renderMetrics(responses, quotas) {
   document.getElementById("totalRegiao").textContent = Object.keys(countBy(responses, "regiao")).length;
   document.getElementById("cotasAbertas").textContent = openQuotas;
   document.getElementById("cotasFechadas").textContent = closedQuotas;
+}
+
+function updatePrintHeader() {
+  const responses = getFilteredResponses();
+  const cidade = filters.cidade.value || "Todas";
+  const printCidade = document.getElementById("printCidade");
+  const printData = document.getElementById("printData");
+  const printTotal = document.getElementById("printTotalEntrevistas");
+
+  if (printCidade) printCidade.textContent = cidade;
+  if (printData) printData.textContent = new Date().toLocaleDateString("pt-BR");
+  if (printTotal) printTotal.textContent = responses.length;
 }
 
 function renderCharts(responses, quotas) {
@@ -333,7 +350,8 @@ function createChart(canvasId, chartKey, type, source) {
     },
     options: {
       responsive: true,
-      maintainAspectRatio: false,
+      maintainAspectRatio: true,
+      aspectRatio: type === "bar" ? 1.65 : 1,
       plugins: {
         legend: {
           display: type !== "bar",
@@ -480,7 +498,8 @@ function createQuestionChart(code, counts) {
     },
     options: {
       responsive: true,
-      maintainAspectRatio: false,
+      maintainAspectRatio: true,
+      aspectRatio: 1,
       cutout: "58%",
       plugins: {
         legend: { display: false }
