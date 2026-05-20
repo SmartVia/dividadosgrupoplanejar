@@ -8,6 +8,7 @@ const printButton = document.getElementById("printButton");
 const clearFiltersButton = document.getElementById("clearFiltersButton");
 const lastUpdated = document.getElementById("lastUpdated");
 const charts = {};
+const printCharts = {};
 const QUESTION_COLORS = {
   A: "#16a34a",
   B: "#2563eb",
@@ -31,12 +32,13 @@ let dashboardData = {
 let printMode = false;
 
 refreshButton.addEventListener("click", loadDashboard);
-printButton.addEventListener("click", () => {
-  preparePrintMode();
-  window.print();
+printButton.addEventListener("click", async () => {
+  window.open("relatorio.html", "_blank", "noopener");
 });
 clearFiltersButton.addEventListener("click", clearFilters);
-window.addEventListener("beforeprint", preparePrintMode);
+window.addEventListener("beforeprint", () => {
+  preparePrintMode();
+});
 window.addEventListener("afterprint", restoreScreenMode);
 
 Object.values(filters).forEach((filter) => {
@@ -306,17 +308,18 @@ function renderMetrics(responses, quotas) {
   document.getElementById("cotasFechadas").textContent = closedQuotas;
 }
 
-function preparePrintMode() {
+async function preparePrintMode() {
   printMode = true;
   document.body.classList.add("printing");
   updatePrintHeader();
-  renderCharts(getFilteredResponses(), dashboardData.quotas);
+  buildPrintReport();
+  await waitForPrintCharts();
 }
 
 function restoreScreenMode() {
   printMode = false;
   document.body.classList.remove("printing");
-  renderCharts(getFilteredResponses(), dashboardData.quotas);
+  destroyPrintCharts();
 }
 
 function updatePrintHeader() {
@@ -530,6 +533,393 @@ function createQuestionChart(code, counts) {
 function getChartPixelRatio() {
   const base = window.devicePixelRatio || 1;
   return printMode ? 7 : Math.max(base, 2);
+}
+
+function waitForPrintCharts() {
+  return new Promise((resolve) => window.setTimeout(resolve, 450));
+}
+
+function buildPrintReport() {
+  const report = document.getElementById("printReport");
+  if (!report) return;
+
+  destroyPrintCharts();
+
+  const responses = getFilteredResponses();
+  const quotas = dashboardData.quotas || [];
+  const closedQuestions = getDetectedQuestions(responses);
+  const openGroups = groupOpenAnswersByQuestion(responses);
+  const today = new Date().toLocaleDateString("pt-BR");
+  const cidade = filters.cidade.value || "Todas";
+  const openQuotas = quotas.filter((quota) => isQuotaOpen(quota)).length;
+  const closedQuotas = quotas.filter((quota) => !isQuotaOpen(quota)).length;
+
+  const closedPages = chunkArray(closedQuestions, 4).map((group, pageIndex) => `
+    <section class="print-page">
+      ${printSectionHeader("Perguntas fechadas", `Distribuição das alternativas ${closedQuestions.length > 4 ? `(${pageIndex + 1})` : ""}`)}
+      <div class="print-grid-2">
+        ${group.map((question) => printClosedQuestionCard(question, responses)).join("")}
+      </div>
+    </section>
+  `).join("");
+
+  const openPages = chunkArray(openGroups, 2).map((group, pageIndex) => `
+    <section class="print-page">
+      ${printSectionHeader("Respostas abertas", `Análise qualitativa ${openGroups.length > 2 ? `(${pageIndex + 1})` : ""}`)}
+      <div class="print-open-list">
+        ${group.map((openGroup) => printOpenQuestionCard(openGroup)).join("")}
+      </div>
+    </section>
+  `).join("");
+
+  report.innerHTML = `
+    <section class="print-page print-cover">
+      <div class="print-cover-header">
+        <p class="eyebrow">DIVIDADOS PESQUISA</p>
+        <h1>Relatório Executivo de Pesquisa</h1>
+        <p>Resultados consolidados das entrevistas sincronizadas no Google Sheets.</p>
+      </div>
+
+      <div class="print-cover-meta">
+        ${printMetaBox("Cidade", cidade)}
+        ${printMetaBox("Data", today)}
+        ${printMetaBox("Entrevistas", responses.length)}
+        ${printMetaBox("Cotas abertas", openQuotas)}
+        ${printMetaBox("Cotas fechadas", closedQuotas)}
+      </div>
+
+      <div class="print-summary-grid">
+        ${printMetricCard("Total de entrevistas", responses.length)}
+        ${printMetricCard("Sexo", Object.keys(countBy(responses, "sexo")).length)}
+        ${printMetricCard("Faixa etária", Object.keys(countBy(responses, "faixaEtaria")).length)}
+        ${printMetricCard("Cidade", Object.keys(countBy(responses, "cidade")).length)}
+        ${printMetricCard("Região/Bairro", Object.keys(countBy(responses, "regiao")).length)}
+        ${printMetricCard("Pesquisadores", Object.keys(countBy(responses, "pesquisador")).length)}
+      </div>
+
+      <div class="print-table-block">
+        <h2>Resumo das cotas</h2>
+        ${printQuotasTable(quotas)}
+      </div>
+    </section>
+
+    <section class="print-page">
+      ${printSectionHeader("Perfil da amostra", "Distribuição das entrevistas")}
+      <div class="print-grid-2">
+        ${printChartCard("Sexo", "print_sexo", "pie")}
+        ${printChartCard("Faixa etária", "print_faixa", "bar")}
+        ${printChartCard("Cidade", "print_cidade", "bar")}
+        ${printChartCard("Região/Bairro", "print_regiao", "bar")}
+      </div>
+    </section>
+
+    ${closedPages || `
+      <section class="print-page">
+        ${printSectionHeader("Perguntas fechadas", "Sem respostas ainda")}
+        <p class="print-empty">Nenhuma pergunta fechada foi encontrada.</p>
+      </section>
+    `}
+
+    ${openPages || `
+      <section class="print-page">
+        ${printSectionHeader("Respostas abertas", "Sem respostas ainda")}
+        <p class="print-empty">Nenhuma resposta aberta foi encontrada.</p>
+      </section>
+    `}
+
+    <section class="print-page">
+      ${printSectionHeader("Resumo final", "Tabelas consolidadas")}
+      <div class="print-table-block">
+        <h2>Resumo das perguntas fechadas</h2>
+        ${printClosedSummaryTable(closedQuestions, responses)}
+      </div>
+      <div class="print-table-block">
+        <h2>Resumo das perguntas abertas</h2>
+        ${printOpenSummaryTable(openGroups)}
+      </div>
+    </section>
+  `;
+
+  createPrintChart("print_sexo", "pie", countBy(responses, "sexo"));
+  createPrintChart("print_faixa", "bar", countBy(responses, "faixaEtaria"));
+  createPrintChart("print_cidade", "bar", countBy(responses, "cidade"));
+  createPrintChart("print_regiao", "bar", countBy(responses, "regiao"));
+
+  closedQuestions.forEach((question) => {
+    createPrintQuestionChart(question.code, countQuestionByCode(responses, question.code));
+  });
+}
+
+function printSectionHeader(eyebrow, title) {
+  return `
+    <header class="print-section-header avoid-break">
+      <p class="eyebrow">${escapeHtml(eyebrow)}</p>
+      <h1>${escapeHtml(title)}</h1>
+    </header>
+  `;
+}
+
+function printMetaBox(label, value) {
+  return `
+    <div>
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+    </div>
+  `;
+}
+
+function printMetricCard(label, value) {
+  return `
+    <article class="summary-card avoid-break">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+    </article>
+  `;
+}
+
+function printChartCard(title, canvasId, type) {
+  return `
+    <article class="print-chart-card chart-card avoid-break">
+      <h2>${escapeHtml(title)}</h2>
+      <div class="${type === "bar" ? "print-bar-wrap" : "print-pie-wrap"}">
+        <canvas id="${canvasId}" width="${type === "bar" ? 520 : 260}" height="${type === "bar" ? 300 : 260}"></canvas>
+      </div>
+    </article>
+  `;
+}
+
+function printClosedQuestionCard(question, responses) {
+  const counts = countQuestionByCode(responses, question.code);
+  const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
+
+  return `
+    <article class="print-question-card chart-card avoid-break">
+      <div class="question-card-header">
+        <span>${escapeHtml(question.code)}</span>
+        <h2>${escapeHtml(question.text || question.code)}</h2>
+      </div>
+      <div class="print-question-layout">
+        <div class="print-pie-wrap">
+          <canvas id="print_question_${escapeHtml(question.code)}" width="240" height="240"></canvas>
+        </div>
+        <div class="question-legend">
+          ${["A", "B", "C", "D"].map((key) => printLegendRow(key, question, counts, total)).join("")}
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function printLegendRow(key, question, counts, total) {
+  const count = counts[key] || 0;
+  const percent = total ? Math.round((count / total) * 100) : 0;
+  const text = question.alternatives[key] || key;
+  return `
+    <div class="legend-row">
+      <span class="legend-color" style="background:${QUESTION_COLORS[key]}"></span>
+      <span><strong>${key}</strong> — ${escapeHtml(text)} — ${percent}% (${count})</span>
+    </div>
+  `;
+}
+
+function printOpenQuestionCard(group) {
+  const answers = [...group.answers].slice(0, 8);
+  const validAnswers = getValidOpenAnswers(group.answers);
+  const words = topWords(validAnswers.map((answer) => answer.text).join(" "), 8);
+  const themes = detectThemes(validAnswers.map((answer) => answer.text).join(" "));
+
+  return `
+    <article class="open-answer-card avoid-break">
+      <header>
+        <span>${escapeHtml(group.code)}</span>
+        <h2>${escapeHtml(group.code)} — ${escapeHtml(group.text || group.code)}</h2>
+        <p>${group.answers.length} respostas · ${validAnswers.length} válidas para análise</p>
+      </header>
+      <div class="print-open-layout">
+        <div class="print-open-responses">
+          ${answers.length ? answers.map((answer) => `
+            <div>
+              <strong>${escapeHtml(answer.cidade || "Sem cidade")}${answer.regiao ? " / " + escapeHtml(answer.regiao) : ""}</strong>
+              <p>"${escapeHtml(answer.text)}"</p>
+              <small>${escapeHtml(answer.pesquisador || "Pesquisador não informado")} · ${escapeHtml(answer.sexo || "")} · ${escapeHtml(answer.faixaEtaria || "")}</small>
+            </div>
+          `).join("") : '<p class="print-empty">Sem respostas abertas para esta pergunta ainda.</p>'}
+        </div>
+        <aside class="print-open-analysis">
+          <h3>Palavras mais repetidas</h3>
+          <div class="word-cloud compact">
+            ${words.length ? words.map((word) => `<span>${escapeHtml(word.word)} <strong>${word.count}</strong></span>`).join("") : "<span>Sem palavras suficientes</span>"}
+          </div>
+          <h3>Principais temas</h3>
+          <ul class="theme-list compact">
+            ${themes.length ? themes.map((theme) => `<li>${escapeHtml(theme.label)} <strong>${theme.count}</strong></li>`).join("") : "<li>Nenhum tema predominante identificado.</li>"}
+          </ul>
+        </aside>
+      </div>
+    </article>
+  `;
+}
+
+function printQuotasTable(quotas) {
+  if (!quotas.length) return '<p class="print-empty">Nenhuma cota cadastrada.</p>';
+
+  return `
+    <table>
+      <thead>
+        <tr><th>Sexo</th><th>Faixa etária</th><th>Meta</th><th>Realizado</th><th>Restante</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        ${quotas.map((quota) => `
+          <tr>
+            <td>${escapeHtml(quota.sexo)}</td>
+            <td>${escapeHtml(quota.faixaEtaria)}</td>
+            <td>${numberValue(quota.meta)}</td>
+            <td>${numberValue(quota.realizado)}</td>
+            <td>${numberValue(quota.restante)}</td>
+            <td>${isQuotaOpen(quota) ? "Aberta" : "Encerrada"}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function printClosedSummaryTable(questions, responses) {
+  if (!questions.length) return '<p class="print-empty">Nenhuma pergunta fechada encontrada.</p>';
+
+  return `
+    <table>
+      <thead>
+        <tr><th>Pergunta</th><th>A</th><th>B</th><th>C</th><th>D</th><th>Total</th><th>Mais votada</th></tr>
+      </thead>
+      <tbody>
+        ${questions.map((question) => {
+          const counts = countQuestionByCode(responses, question.code);
+          const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
+          return `
+            <tr>
+              <td><strong>${escapeHtml(question.code)}</strong> ${escapeHtml(question.text || "")}</td>
+              <td>${formatSummaryCell("A", question, counts, total)}</td>
+              <td>${formatSummaryCell("B", question, counts, total)}</td>
+              <td>${formatSummaryCell("C", question, counts, total)}</td>
+              <td>${formatSummaryCell("D", question, counts, total)}</td>
+              <td>${total}</td>
+              <td>${getWinner(question, counts)}</td>
+            </tr>
+          `;
+        }).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function printOpenSummaryTable(groups) {
+  if (!groups.length) return '<p class="print-empty">Nenhuma pergunta aberta encontrada.</p>';
+
+  return `
+    <table>
+      <thead>
+        <tr><th>Código</th><th>Pergunta</th><th>Total</th><th>Palavra mais citada</th><th>Principal tema</th><th>Vazias/sem opinião</th></tr>
+      </thead>
+      <tbody>
+        ${groups.map((group) => {
+          const validAnswers = getValidOpenAnswers(group.answers);
+          const words = topWords(validAnswers.map((answer) => answer.text).join(" "), 1);
+          const themes = detectThemes(validAnswers.map((answer) => answer.text).join(" "));
+          return `
+            <tr>
+              <td>${escapeHtml(group.code)}</td>
+              <td>${escapeHtml(group.text || group.code)}</td>
+              <td>${group.answers.length}</td>
+              <td>${words[0] ? `${escapeHtml(words[0].word)} (${words[0].count})` : "Sem dados"}</td>
+              <td>${themes[0] ? `${escapeHtml(themes[0].label)} (${themes[0].count})` : "Sem tema predominante"}</td>
+              <td>${countLowValueOpenAnswers(group.answers)}</td>
+            </tr>
+          `;
+        }).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function createPrintChart(canvasId, type, source) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+
+  const labels = Object.keys(source);
+  const values = Object.values(source);
+  printCharts[canvasId] = new Chart(canvas, {
+    type,
+    data: {
+      labels: labels.length ? labels : ["Sem dados"],
+      datasets: [{
+        data: values.length ? values : [0],
+        backgroundColor: ["#0f766e", "#2563eb", "#d97706", "#7c3aed", "#be123c", "#475569", "#059669", "#9333ea"],
+        borderColor: "#ffffff",
+        borderWidth: 2
+      }]
+    },
+    options: printChartOptions(type)
+  });
+}
+
+function createPrintQuestionChart(code, counts) {
+  const canvasId = `print_question_${code}`;
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+
+  printCharts[canvasId] = new Chart(canvas, {
+    type: "doughnut",
+    data: {
+      labels: ["A", "B", "C", "D"],
+      datasets: [{
+        data: ["A", "B", "C", "D"].map((key) => counts[key] || 0),
+        backgroundColor: ["A", "B", "C", "D"].map((key) => QUESTION_COLORS[key]),
+        borderColor: "#ffffff",
+        borderWidth: 2
+      }]
+    },
+    options: {
+      ...printChartOptions("doughnut"),
+      cutout: "58%",
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+function printChartOptions(type) {
+  return {
+    responsive: false,
+    maintainAspectRatio: true,
+    animation: false,
+    devicePixelRatio: 4,
+    plugins: {
+      legend: {
+        display: type !== "bar",
+        position: "bottom",
+        labels: { boxWidth: 9, padding: 8, font: { size: 9 } }
+      }
+    },
+    scales: type === "bar" ? {
+      x: { grid: { display: false }, ticks: { maxRotation: 20, minRotation: 0, font: { size: 9 } } },
+      y: { beginAtZero: true, ticks: { precision: 0, font: { size: 9 } } }
+    } : {}
+  };
+}
+
+function destroyPrintCharts() {
+  Object.keys(printCharts).forEach((key) => {
+    printCharts[key].destroy();
+    delete printCharts[key];
+  });
+}
+
+function chunkArray(items, size) {
+  const chunks = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
 }
 
 function renderQuestionLegend(question, counts, total) {
