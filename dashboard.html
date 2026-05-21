@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - Dividados Pesquisa</title>
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=5">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     if (!window.Chart) {
@@ -14,19 +14,18 @@
 </head>
 <body class="dashboard-page">
   <main class="dashboard-shell executive-dashboard">
-    <header class="dashboard-hero no-print">
-      <div>
-        <p class="eyebrow">Pesquisa quantitativa e qualitativa</p>
-        <h1>Dividados Pesquisa</h1>
-        <p class="dashboard-subtitle">Painel executivo com resultados dinâmicos por perfil, perguntas fechadas, semifechadas, escalas, respostas abertas e rankings.</p>
+    <header class="dashboard-hero dashboard-command-header no-print">
+      <div class="dashboard-brand">
+        <p class="eyebrow">Dividados Pesquisa</p>
+        <h1>Painel Executivo</h1>
+        <p class="dashboard-subtitle">Painel executivo de pesquisa quantitativa e qualitativa</p>
       </div>
-      <div class="header-actions">
-        <a class="small-link" href="index.html">Formulário</a>
-        <a class="secondary-button report-link" href="campo.html" target="_blank">Relatório de Campo</a>
-        <a class="secondary-button report-link" href="relatorio.html" target="_blank">Gerar Relatório PDF</a>
-        <button id="printButton" class="secondary-button" type="button">PDF do Dashboard</button>
+      <nav class="dashboard-nav" aria-label="Navegação do dashboard">
+        <a class="dashboard-nav-link" href="index.html">Formulário</a>
+        <a class="secondary-button report-link" href="campo.html" target="_blank" rel="noopener">Relatório de Campo</a>
+        <a class="secondary-button report-link" href="relatorio.html" target="_blank" rel="noopener">Gerar Relatório PDF</a>
         <button id="refreshButton" class="primary-button" type="button">Atualizar dados</button>
-      </div>
+      </nav>
     </header>
 
     <div id="dashboardMessage" class="message no-print" hidden></div>
@@ -185,6 +184,6 @@
   </main>
 
   <script src="api-client.js?v=1"></script>
-  <script src="dashboard.js?v=28"></script>
+  <script src="dashboard.js?v=29"></script>
 </body>
 </html>

@@ -16,7 +16,6 @@ const PALETTE = ["#0f766e", "#2563eb", "#d97706", "#7c3aed", "#be123c", "#475569
 
 const dashboardMessage = document.getElementById("dashboardMessage");
 const refreshButton = document.getElementById("refreshButton");
-const printButton = document.getElementById("printButton");
 const clearFiltersButton = document.getElementById("clearFiltersButton");
 const lastUpdated = document.getElementById("lastUpdated");
 const crossQuestionSelect = document.getElementById("crossQuestionSelect");
@@ -41,7 +40,6 @@ const filters = {
 let dashboardData = { responses: [], quotas: [], questions: [], researchers: [] };
 
 refreshButton.addEventListener("click", loadDashboard);
-printButton.addEventListener("click", () => window.print());
 clearFiltersButton.addEventListener("click", clearFilters);
 if (generateCrossButton) generateCrossButton.addEventListener("click", renderCrossAnalysis);
 if (exportCrossButton) exportCrossButton.addEventListener("click", exportCrossCsv);
