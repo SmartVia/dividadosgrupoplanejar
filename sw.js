@@ -1,9 +1,13 @@
-const CACHE_NAME = "dividados-pesquisa-v3";
+const CACHE_NAME = "dividados-pesquisa-v5";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
+  "./dashboard.html",
+  "./relatorio.html",
   "./style.css",
-  "./script.js"
+  "./script.js",
+  "./dashboard.js",
+  "./relatorio.js"
 ];
 
 self.addEventListener("install", (event) => {

@@ -4,6 +4,9 @@ const API_URL = "https://script.google.com/macros/s/AKfycby1iZyydOBfSrNpKPx0HulX
 
 const OFFLINE_QUEUE_KEY = "dividados_offline_queue_v1";
 const MAX_CLOSED_QUESTIONS = 100;
+const MAX_OPEN_QUESTIONS = 20;
+const OPTION_KEYS = ["A", "B", "C", "D", "E", "F"];
+const SCALE_WEIGHTS = { A: 1, B: 2, C: 3, D: 4, E: 5, F: 6 };
 const CITY_CACHE_KEY = "dividados_mg_cities_v1";
 const MG_CITIES_API_URL = "https://servicodados.ibge.gov.br/api/v1/localidades/estados/MG/municipios";
 const MG_CITIES_FALLBACK = [
@@ -151,92 +154,102 @@ function normalizeQuestions(questions) {
   return questions
     .filter((question) => normalizeText(question.ativa || question.Ativa || "Sim") !== "nao")
     .sort((a, b) => Number(a.ordem || 99) - Number(b.ordem || 99))
-    .map((question, index) => ({
-      id: normalizeQuestionId(question.id || question.ID || question.codigo || question.Codigo || `P${index + 1}`, question.tipo || question.Tipo, index),
-      pergunta: question.pergunta || question.Pergunta || "",
-      tipo: question.tipo || question.Tipo || "Fechada",
-      a: question.a || question.A || "Alternativa A",
-      b: question.b || question.B || "Alternativa B",
-      c: question.c || question.C || "Alternativa C",
-      d: question.d || question.D || "Alternativa D",
-      ordem: Number(question.ordem || question.Ordem || index + 1)
-    }));
+    .map((question, index) => {
+      const type = normalizeQuestionType(question.tipo || question.Tipo || "Fechada");
+      const id = normalizeQuestionId(question.id || question.ID || question.codigo || question.Codigo || `P${index + 1}`, type, index);
+      const alternatives = getQuestionAlternatives(question, type);
+
+      return {
+        id,
+        grupo: question.grupo || question.Grupo || "Geral",
+        contexto: question.contexto || question.Contexto || "",
+        pergunta: question.pergunta || question.Pergunta || "",
+        tipo: type,
+        alternatives,
+        a: alternatives.A || "",
+        b: alternatives.B || "",
+        c: alternatives.C || "",
+        d: alternatives.D || "",
+        e: alternatives.E || "",
+        f: alternatives.F || "",
+        ordem: Number(question.ordem || question.Ordem || index + 1)
+      };
+    });
 }
 
 function normalizeQuestionId(id, type, index) {
   const value = String(id || "").trim();
   const normalized = normalizeText(value);
-  const normalizedType = normalizeText(type);
 
   if (normalized === "aberta" || normalized === "fechada") {
-    return normalizedType === "aberta" ? `ra${index + 1}` : `p${index + 1}`;
+    return type === "abertatexto" ? `p${index + 1}` : `p${index + 1}`;
   }
 
   return value.toLowerCase();
 }
 
 function renderQuestions(questions) {
-  const closedQuestions = questions
-    .filter((question) => normalizeText(question.tipo) !== "aberta")
-    .slice(0, MAX_CLOSED_QUESTIONS);
-  const openQuestions = questions.filter((question) => normalizeText(question.tipo) === "aberta").slice(0, 20);
+  const activeQuestions = questions
+    .filter((question) => normalizeQuestionType(question.tipo) !== "abertatexto" || getOpenQuestionCount(questions, question) <= MAX_OPEN_QUESTIONS)
+    .slice(0, MAX_CLOSED_QUESTIONS + MAX_OPEN_QUESTIONS);
+  let lastContext = "";
 
-  dynamicQuestions.innerHTML = closedQuestions.map((question, index) => {
+  dynamicQuestions.innerHTML = activeQuestions.map((question, index) => {
+    const type = normalizeQuestionType(question.tipo);
     const questionCode = String(question.id || `p${index + 1}`).toLowerCase();
     const fieldName = `q_${questionCode.replace(/[^a-z0-9]/g, "_")}`;
     const questionMeta = encodeURIComponent(JSON.stringify({
       id: question.id || `p${index + 1}`,
       campo: String(question.id || `P${index + 1}`).toUpperCase(),
       pergunta: question.pergunta || `Pergunta ${index + 1}`,
-      tipo: "Fechada",
+      contexto: question.contexto || "",
+      grupo: question.grupo || "Geral",
+      tipo: question.tipo,
       ordem: question.ordem || index + 1
     }));
+    const contextHtml = question.contexto && normalizeText(question.contexto) !== normalizeText(lastContext)
+      ? `<div class="question-context"><strong>Contexto</strong><p>${escapeHtml(question.contexto)}</p></div>`
+      : "";
+
+    lastContext = question.contexto || lastContext;
+
+    if (type === "abertatexto") {
+      return `
+        ${contextHtml}
+        <label class="open-text-question" data-open-question-meta="${questionMeta}" data-field-name="${fieldName}">
+          <span>${index + 1}. ${escapeHtml(question.pergunta || `Pergunta aberta ${index + 1}`)}</span>
+          <textarea name="${fieldName}" rows="5" placeholder="Escreva a resposta do entrevistado"></textarea>
+        </label>
+      `;
+    }
+
+    const options = OPTION_KEYS
+      .filter((key) => question.alternatives[key])
+      .map((key, optionIndex) => `
+        <label>
+          <input type="radio" name="${fieldName}" value="${key}" ${optionIndex === 0 ? "required" : ""}>
+          ${key}) ${escapeHtml(question.alternatives[key])}${type === "escala" ? ` <small>Peso ${SCALE_WEIGHTS[key]}</small>` : ""}
+        </label>
+      `)
+      .join("");
+
     return `
+      ${contextHtml}
       <fieldset data-question-meta="${questionMeta}" data-field-name="${fieldName}">
         <legend>${index + 1}. ${escapeHtml(question.pergunta || `Pergunta ${index + 1}`)}</legend>
-        <label><input type="radio" name="${fieldName}" value="A" required> A) ${escapeHtml(question.a)}</label>
-        <label><input type="radio" name="${fieldName}" value="B"> B) ${escapeHtml(question.b)}</label>
-        <label><input type="radio" name="${fieldName}" value="C"> C) ${escapeHtml(question.c)}</label>
-        <label><input type="radio" name="${fieldName}" value="D"> D) ${escapeHtml(question.d)}</label>
+        <div class="${type === "escala" ? "scale-options" : ""}">
+          ${options || '<p class="muted-text">Cadastre alternativas na aba Perguntas.</p>'}
+        </div>
       </fieldset>
     `;
-  }).join("");
-
-  const openQuestionsHtml = openQuestions.map((question, index) => {
-    const questionCode = String(question.id || `ra${index + 1}`).toLowerCase();
-    const fieldName = `q_${questionCode.replace(/[^a-z0-9]/g, "_")}`;
-    const questionMeta = encodeURIComponent(JSON.stringify({
-      id: question.id || `ra${index + 1}`,
-      campo: String(question.id || `RA${index + 1}`).toUpperCase(),
-      pergunta: question.pergunta || `Pergunta aberta ${index + 1}`,
-      tipo: "Aberta",
-      ordem: question.ordem || index + 1
-    }));
-
-    return `
-      <label data-open-question-meta="${questionMeta}" data-field-name="${fieldName}">
-        ${escapeHtml(question.pergunta || `Pergunta aberta ${index + 1}`)}
-        <textarea name="${fieldName}" rows="5" placeholder="Escreva a resposta do entrevistado"></textarea>
-      </label>
-    `;
-  }).join("");
-
-  dynamicQuestions.insertAdjacentHTML("beforeend", openQuestionsHtml || `
-    <label data-open-question-meta="${encodeURIComponent(JSON.stringify({ id: "ra1", campo: "RA1", pergunta: "Pergunta aberta final", tipo: "Aberta", ordem: 999 }))}" data-field-name="q_ra1">
-      Pergunta aberta final
-      <textarea name="q_ra1" rows="5" placeholder="Escreva a resposta do entrevistado"></textarea>
-    </label>
-  `);
+  }).join("") || '<p class="muted-text">Nenhuma pergunta ativa encontrada na aba Perguntas.</p>';
 }
 
 function getFallbackQuestions() {
   return [
-    { id: "p1", pergunta: "Como voce avalia os servicos publicos da sua regiao?", tipo: "Fechada", a: "Muito bons", b: "Bons", c: "Regulares", d: "Ruins", ordem: 1 },
-    { id: "p2", pergunta: "Qual area deve receber mais atencao?", tipo: "Fechada", a: "Saude", b: "Educacao", c: "Seguranca", d: "Transporte", ordem: 2 },
-    { id: "p3", pergunta: "Com que frequencia voce acompanha noticias locais?", tipo: "Fechada", a: "Todos os dias", b: "Algumas vezes por semana", c: "Raramente", d: "Nunca", ordem: 3 },
-    { id: "p4", pergunta: "Qual canal voce mais usa para se informar?", tipo: "Fechada", a: "Televisao", b: "Radio", c: "Redes sociais", d: "Sites de noticias", ordem: 4 },
-    { id: "p5", pergunta: "Voce pretende participar mais das decisoes da sua comunidade?", tipo: "Fechada", a: "Sim, com certeza", b: "Talvez", c: "Pouco provavel", d: "Nao", ordem: 5 },
-    { id: "aberta", pergunta: "Pergunta aberta final", tipo: "Aberta", ordem: 6 }
+    { id: "p1", grupo: "Opiniao publica", contexto: "", pergunta: "Qual area deve receber mais atencao?", tipo: "Fechada", alternatives: { A: "Saude", B: "Educacao", C: "Seguranca", D: "Transporte" }, ordem: 1 },
+    { id: "p2", grupo: "Avaliacao", contexto: "Avalie os servicos publicos da sua regiao.", pergunta: "Saude", tipo: "Escala", alternatives: getDefaultScaleAlternatives(), ordem: 2 },
+    { id: "p3", grupo: "Qualitativo", contexto: "", pergunta: "O que precisa melhorar na cidade?", tipo: "AbertaTexto", alternatives: {}, ordem: 3 }
   ];
 }
 
@@ -343,7 +356,7 @@ async function submitSurvey(event) {
   }
 
   try {
-    const response = await apiRequest("submitResponse", payload);
+    const response = await apiRequest("submitResponse", compactSubmitPayload(payload));
 
     if (response.ok) {
       showMessage("Entrevista salva com sucesso.", "success");
@@ -372,7 +385,7 @@ function buildSurveyPayload(origin) {
   const formData = new FormData(form);
   const uniqueId = createUniqueId();
   const questionAnswers = collectQuestionAnswers(formData);
-  const firstOpenAnswer = questionAnswers.find((answer) => normalizeText(answer.tipo) === "aberta" && answer.resposta);
+  const firstOpenAnswer = questionAnswers.find((answer) => normalizeQuestionType(answer.tipo) === "abertatexto" && answer.resposta);
 
   return {
     uniqueId,
@@ -383,16 +396,33 @@ function buildSurveyPayload(origin) {
     endereco: formData.get("endereco").trim(),
     sexo: formData.get("sexo"),
     faixaEtaria: formData.get("faixaEtaria"),
-    p1: formData.get("p1"),
-    p2: formData.get("p2"),
-    p3: formData.get("p3"),
-    p4: formData.get("p4"),
-    p5: formData.get("p5"),
     respostas: questionAnswers,
-    respostasJson: JSON.stringify(questionAnswers),
     respostaAberta: firstOpenAnswer ? firstOpenAnswer.resposta : "",
     origem: origin,
     statusSincronizacao: origin === "Offline" ? "Pendente" : "Sincronizada"
+  };
+}
+
+function compactSubmitPayload(payload) {
+  return {
+    uniqueId: payload.uniqueId,
+    dataHora: payload.dataHora,
+    pesquisador: payload.pesquisador,
+    cidade: payload.cidade,
+    regiao: payload.regiao,
+    endereco: payload.endereco,
+    sexo: payload.sexo,
+    faixaEtaria: payload.faixaEtaria,
+    respostas: (payload.respostas || []).map((answer) => ({
+      campo: answer.campo,
+      id: answer.id,
+      tipo: answer.tipo,
+      resposta: answer.resposta,
+      peso: answer.peso || ""
+    })),
+    respostaAberta: payload.respostaAberta || "",
+    origem: payload.origem,
+    statusSincronizacao: payload.statusSincronizacao
   };
 }
 
@@ -476,7 +506,10 @@ function collectQuestionAnswers(formData) {
       campo: String(meta.campo || meta.id || fieldName).toUpperCase(),
       id: meta.id || fieldName,
       pergunta: meta.pergunta || "",
+      contexto: meta.contexto || "",
+      grupo: meta.grupo || "Geral",
       tipo: meta.tipo || "Fechada",
+      peso: SCALE_WEIGHTS[String(formData.get(fieldName) || "").toUpperCase()] || "",
       resposta: formData.get(fieldName) || ""
     };
   });
@@ -496,12 +529,53 @@ function collectQuestionAnswers(formData) {
       campo: String(meta.campo || meta.id || `RA${index + 1}`).toUpperCase(),
       id: meta.id || `ra${index + 1}`,
       pergunta: meta.pergunta || "",
-      tipo: meta.tipo || "Aberta",
+      contexto: meta.contexto || "",
+      grupo: meta.grupo || "Geral",
+      tipo: meta.tipo || "AbertaTexto",
       resposta: String(formData.get(fieldName) || "").trim()
     };
   });
 
   return [...closedAnswers, ...openAnswers];
+}
+
+function normalizeQuestionType(type) {
+  const normalized = normalizeText(type);
+  if (normalized === "escala") return "escala";
+  if (normalized === "abertatexto" || normalized === "aberta" || normalized === "texto") return "abertatexto";
+  return "fechada";
+}
+
+function getQuestionAlternatives(question, type) {
+  const alternatives = {};
+  OPTION_KEYS.forEach((key) => {
+    const value = question[key.toLowerCase()] || question[key] || "";
+    if (value) alternatives[key] = String(value).trim();
+  });
+
+  if (type === "escala" && !Object.keys(alternatives).length) {
+    return getDefaultScaleAlternatives();
+  }
+
+  return alternatives;
+}
+
+function getDefaultScaleAlternatives() {
+  return {
+    A: "Otimo",
+    B: "Bom",
+    C: "Regular",
+    D: "Ruim",
+    E: "Pessimo",
+    F: "N.T.O"
+  };
+}
+
+function getOpenQuestionCount(questions, targetQuestion) {
+  return questions
+    .filter((question) => normalizeQuestionType(question.tipo) === "abertatexto")
+    .filter((question) => Number(question.ordem || 999) <= Number(targetQuestion.ordem || 999))
+    .length;
 }
 
 function normalizeText(value) {
@@ -588,7 +662,7 @@ async function syncPendingResponses() {
         origem: "Offline",
         statusSincronizacao: "Sincronizada"
       };
-      const response = await apiRequest("submitResponse", payload);
+      const response = await apiRequest("submitResponse", compactSubmitPayload(payload));
 
       if (!response.ok) {
         stillPending.push(item);
