@@ -1,5 +1,5 @@
 (function () {
-  const OPTION_KEYS_EXTENDED = ["A", "B", "C", "D", "E", "F", "G", "H"];
+  const OPTION_KEYS_EXTENDED = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
   const SCALE_WEIGHTS_EXTENDED = { A: 1, B: 2, C: 3, D: 4, E: 5, F: 6 };
   const MAX_CLOSED = 100;
   const MAX_OPEN = 20;
@@ -56,6 +56,8 @@
           f: alternatives.F || "",
           g: alternatives.G || "",
           h: alternatives.H || "",
+          i: alternatives.I || "",
+          j: alternatives.J || "",
           ordem: Number(question.ordem || question.Ordem || index + 1)
         };
       });

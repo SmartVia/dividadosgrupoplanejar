@@ -1,8 +1,8 @@
 const API_URL = "https://script.google.com/macros/s/AKfycby1iZyydOBfSrNpKPx0HulX3gT-KhfUEaOxxcfCq6JaUyB2UF43dAVtKd9hNxSGOoD7/exec";
 
-const OPTION_KEYS = ["A", "B", "C", "D", "E", "F"];
+const OPTION_KEYS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
 const SCALE_WEIGHTS = { A: 1, B: 2, C: 3, D: 4, E: 5, F: 6 };
-const COLORS = { A: "#16a34a", B: "#2563eb", C: "#f97316", D: "#7c3aed", E: "#dc2626", F: "#64748b" };
+const COLORS = { A: "#16a34a", B: "#2563eb", C: "#f97316", D: "#7c3aed", E: "#dc2626", F: "#64748b", G: "#0891b2", H: "#475569", I: "#db2777", J: "#65a30d" };
 const PALETTE = ["#0f766e", "#2563eb", "#d97706", "#7c3aed", "#be123c", "#475569"];
 const reportRoot = document.getElementById("reportRoot");
 const printReportButton = document.getElementById("printReportButton");
@@ -372,12 +372,15 @@ function getOtherText(row, question) {
 
 function calculateScaleStats(question) {
   const counts = countQuestion(question);
-  const total = OPTION_KEYS.reduce((sum, key) => sum + (counts[key] || 0), 0);
-  const validKeys = OPTION_KEYS.filter((key) => key !== "F");
+  const keys = optionKeys(question);
+  const ntoKeys = keys.filter((key) => isNtoOption(question.alternatives[key]));
+  const validKeys = keys.filter((key) => !ntoKeys.includes(key) && SCALE_WEIGHTS[key]);
+  const total = keys.reduce((sum, key) => sum + (counts[key] || 0), 0);
   const valid = validKeys.reduce((sum, key) => sum + (counts[key] || 0), 0);
   const weighted = validKeys.reduce((sum, key) => sum + ((counts[key] || 0) * SCALE_WEIGHTS[key]), 0);
   const avg = valid ? weighted / valid : 0;
-  return { question, counts, technicalAverage: avg, classification: classifyAverage(avg), approvalPercent: percent((counts.A || 0) + (counts.B || 0), valid), rejectionPercent: percent((counts.D || 0) + (counts.E || 0), valid), ntoPercent: percent(counts.F || 0, total) };
+  const nto = ntoKeys.reduce((sum, key) => sum + (counts[key] || 0), 0);
+  return { question, counts, technicalAverage: avg, classification: classifyAverage(avg), approvalPercent: percent((counts.A || 0) + (counts.B || 0), valid), rejectionPercent: percent((counts.D || 0) + (counts.E || 0), valid), ntoPercent: percent(nto, total) };
 }
 
 function countBy(rows, field) {
@@ -385,6 +388,7 @@ function countBy(rows, field) {
 }
 
 function optionKeys(question) { return OPTION_KEYS.filter((key) => question.alternatives[key]); }
+function isNtoOption(value) { const normalized = normalizeText(value).replace(/\./g, "").replace(/\s+/g, ""); return normalized === "nto" || normalized === "naotemopiniao" || normalized === "semopiniao"; }
 function percent(value, total) { return total ? Math.round((value / total) * 100) : 0; }
 function classifyAverage(value) { if (!value) return "Sem dados"; if (value <= 1.8) return "Excelente"; if (value <= 2.6) return "Boa"; if (value <= 3.4) return "Regular"; if (value <= 4.2) return "Ruim"; return "Pessima"; }
 function normalizeQuestionType(type) { const n = normalizeText(type); if (n === "escala") return "escala"; if (n === "semifechada" || n === "semi fechada" || n === "semi-fechada") return "semifechada"; if (n === "abertatexto" || n === "aberta" || n === "texto") return "abertatexto"; return "fechada"; }

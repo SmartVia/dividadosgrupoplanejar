@@ -1,7 +1,7 @@
 // Cole somente a URL publicada do seu Google Apps Script entre as aspas.
 const API_URL = "https://script.google.com/macros/s/AKfycby1iZyydOBfSrNpKPx0HulX3gT-KhfUEaOxxcfCq6JaUyB2UF43dAVtKd9hNxSGOoD7/exec";
 
-const OPTION_KEYS = ["A", "B", "C", "D", "E", "F"];
+const OPTION_KEYS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
 const SCALE_WEIGHTS = { A: 1, B: 2, C: 3, D: 4, E: 5, F: 6 };
 const COLORS = {
   A: "#16a34a",
@@ -9,7 +9,11 @@ const COLORS = {
   C: "#f97316",
   D: "#7c3aed",
   E: "#dc2626",
-  F: "#64748b"
+  F: "#64748b",
+  G: "#0891b2",
+  H: "#475569",
+  I: "#db2777",
+  J: "#65a30d"
 };
 const PALETTE = ["#0f766e", "#2563eb", "#d97706", "#7c3aed", "#be123c", "#475569", "#059669", "#9333ea"];
 
@@ -430,14 +434,16 @@ function renderLegend(containerId, question, counts) {
 
 function calculateScaleStats(responses, question) {
   const counts = countQuestion(responses, question);
-  const total = OPTION_KEYS.reduce((sum, key) => sum + (counts[key] || 0), 0);
-  const validKeys = OPTION_KEYS.filter((key) => key !== "F");
+  const keys = getOptionKeys(question);
+  const ntoKeys = keys.filter((key) => isNtoOption(question.alternatives[key]));
+  const validKeys = keys.filter((key) => !ntoKeys.includes(key) && SCALE_WEIGHTS[key]);
+  const total = keys.reduce((sum, key) => sum + (counts[key] || 0), 0);
   const validResponses = validKeys.reduce((sum, key) => sum + (counts[key] || 0), 0);
-  const weightedTotal = OPTION_KEYS.reduce((sum, key) => sum + ((counts[key] || 0) * SCALE_WEIGHTS[key]), 0);
+  const weightedTotal = keys.reduce((sum, key) => sum + ((counts[key] || 0) * (SCALE_WEIGHTS[key] || 0)), 0);
   const technicalWeightedTotal = validKeys.reduce((sum, key) => sum + ((counts[key] || 0) * SCALE_WEIGHTS[key]), 0);
   const approval = (counts.A || 0) + (counts.B || 0);
   const rejection = (counts.D || 0) + (counts.E || 0);
-  const nto = counts.F || 0;
+  const nto = ntoKeys.reduce((sum, key) => sum + (counts[key] || 0), 0);
   const technicalAverage = validResponses ? technicalWeightedTotal / validResponses : 0;
   return {
     question,
@@ -617,6 +623,11 @@ function getQuestionsByTypes(types) {
 
 function getOptionKeys(question) {
   return OPTION_KEYS.filter((key) => question.alternatives[key]);
+}
+
+function isNtoOption(value) {
+  const normalized = normalizeText(value).replace(/\./g, "").replace(/\s+/g, "");
+  return normalized === "nto" || normalized === "naotemopiniao" || normalized === "semopiniao";
 }
 
 function classifyAverage(value) {

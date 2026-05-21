@@ -8,7 +8,7 @@ const QUOTAS_CACHE_KEY = "dividados_quotas_cache_v1";
 const RESEARCHERS_CACHE_KEY = "dividados_researchers_cache_v1";
 const MAX_CLOSED_QUESTIONS = 100;
 const MAX_OPEN_QUESTIONS = 20;
-const OPTION_KEYS = ["A", "B", "C", "D", "E", "F", "G", "H"];
+const OPTION_KEYS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
 const SCALE_WEIGHTS = { A: 1, B: 2, C: 3, D: 4, E: 5, F: 6 };
 const CITY_CACHE_KEY = "dividados_mg_cities_v1";
 const MG_CITIES_API_URL = "https://servicodados.ibge.gov.br/api/v1/localidades/estados/MG/municipios";
@@ -311,6 +311,8 @@ function normalizeQuestions(questions) {
         f: alternatives.F || "",
         g: alternatives.G || "",
         h: alternatives.H || "",
+        i: alternatives.I || "",
+        j: alternatives.J || "",
         ordem: Number(question.ordem || question.Ordem || index + 1)
       };
     });
