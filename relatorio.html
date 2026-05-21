@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatório Executivo - Dividados Pesquisa</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="report-page">
+  <div class="report-toolbar no-print">
+    <a class="small-link" href="dashboard.html">Voltar ao dashboard</a>
+    <button id="printReportButton" class="primary-button" type="button">Imprimir / Salvar PDF</button>
+  </div>
+
+  <main id="reportRoot" class="report-document">
+    <section class="print-page report-loading">
+      <h1>Carregando relatório...</h1>
+      <p>Buscando dados do Google Sheets.</p>
+    </section>
+  </main>
+
+  <script src="relatorio.js?v=2"></script>
+</body>
+</html>

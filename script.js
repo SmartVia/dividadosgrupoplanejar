@@ -3,7 +3,7 @@
 const API_URL = "https://script.google.com/macros/s/AKfycby1iZyydOBfSrNpKPx0HulX3gT-KhfUEaOxxcfCq6JaUyB2UF43dAVtKd9hNxSGOoD7/exec";
 
 const OFFLINE_QUEUE_KEY = "dividados_offline_queue_v1";
-const QUESTIONS_CACHE_KEY = "dividados_questions_cache_v2";
+const QUESTIONS_CACHE_KEY = "dividados_questions_cache_v3";
 const MAX_CLOSED_QUESTIONS = 100;
 const MAX_OPEN_QUESTIONS = 20;
 const OPTION_KEYS = ["A", "B", "C", "D", "E", "F"];
@@ -242,11 +242,12 @@ function renderQuestions(questions) {
       .filter((key) => question.alternatives[key])
       .map((key, optionIndex) => `
         <label>
-          <input type="radio" name="${fieldName}" value="${key}" ${optionIndex === 0 ? "required" : ""}>
+          <input type="radio" name="${fieldName}" value="${key}" data-option-text="${escapeHtml(question.alternatives[key])}" ${optionIndex === 0 ? "required" : ""}>
           ${key}) ${escapeHtml(question.alternatives[key])}${type === "escala" ? ` <small>Peso ${SCALE_WEIGHTS[key]}</small>` : ""}
         </label>
       `)
       .join("");
+    const hasOtherOption = OPTION_KEYS.some((key) => isOtherOption(question.alternatives[key]));
 
     return `
       ${contextHtml}
@@ -255,9 +256,17 @@ function renderQuestions(questions) {
         <div class="${type === "escala" ? "scale-options" : ""}">
           ${options || '<p class="muted-text">Cadastre alternativas na aba Perguntas.</p>'}
         </div>
+        ${type === "semifechada" && hasOtherOption ? `
+          <label class="other-answer-field hidden" data-other-for="${fieldName}">
+            Descreva a alternativa Outra
+            <textarea name="${fieldName}_outra" rows="3" placeholder="Digite a resposta complementar"></textarea>
+          </label>
+        ` : ""}
       </fieldset>
     `;
   }).join("") || '<p class="muted-text">Nenhuma pergunta ativa encontrada na aba Perguntas.</p>';
+
+  setupSemiClosedOtherFields();
 }
 
 function getFallbackQuestions() {
@@ -435,6 +444,7 @@ function compactSubmitPayload(payload) {
       id: answer.id,
       tipo: answer.tipo,
       resposta: answer.resposta,
+      respostaTexto: answer.respostaTexto || "",
       peso: answer.peso || ""
     })),
     respostaAberta: payload.respostaAberta || "",
@@ -518,6 +528,9 @@ function collectQuestionAnswers(formData) {
     }
 
     const fieldName = fieldset.dataset.fieldName || `p${index + 1}`;
+    const selected = fieldset.querySelector(`input[name="${cssEscape(fieldName)}"]:checked`);
+    const selectedText = selected ? selected.dataset.optionText || "" : "";
+    const otherText = String(formData.get(`${fieldName}_outra`) || "").trim();
 
     return {
       campo: String(meta.campo || meta.id || fieldName).toUpperCase(),
@@ -527,7 +540,8 @@ function collectQuestionAnswers(formData) {
       grupo: meta.grupo || "Geral",
       tipo: meta.tipo || "Fechada",
       peso: SCALE_WEIGHTS[String(formData.get(fieldName) || "").toUpperCase()] || "",
-      resposta: formData.get(fieldName) || ""
+      resposta: formData.get(fieldName) || "",
+      respostaTexto: isOtherOption(selectedText) ? otherText : ""
     };
   });
 
@@ -559,8 +573,46 @@ function collectQuestionAnswers(formData) {
 function normalizeQuestionType(type) {
   const normalized = normalizeText(type);
   if (normalized === "escala") return "escala";
+  if (normalized === "semifechada" || normalized === "semi fechada" || normalized === "semi-fechada") return "semifechada";
   if (normalized === "abertatexto" || normalized === "aberta" || normalized === "texto") return "abertatexto";
   return "fechada";
+}
+
+function setupSemiClosedOtherFields() {
+  dynamicQuestions.querySelectorAll("fieldset[data-question-meta]").forEach((fieldset) => {
+    const fieldName = fieldset.dataset.fieldName;
+    const otherField = fieldset.querySelector(`[data-other-for="${fieldName}"]`);
+    if (!otherField) return;
+
+    const textarea = otherField.querySelector("textarea");
+    const radios = fieldset.querySelectorAll(`input[name="${cssEscape(fieldName)}"]`);
+
+    const updateOtherField = () => {
+      const selected = fieldset.querySelector(`input[name="${cssEscape(fieldName)}"]:checked`);
+      const shouldShow = selected && isOtherOption(selected.dataset.optionText);
+      otherField.classList.toggle("hidden", !shouldShow);
+      textarea.required = Boolean(shouldShow);
+      if (!shouldShow) textarea.value = "";
+    };
+
+    radios.forEach((radio) => radio.addEventListener("change", updateOtherField));
+    updateOtherField();
+  });
+}
+
+function isOtherOption(value) {
+  const normalized = normalizeText(value).replace(/\./g, "").replace(/\s+/g, " ").trim();
+  return normalized === "outra" || normalized === "outro";
+}
+
+function isNtoOption(value) {
+  const normalized = normalizeText(value).replace(/\./g, "").replace(/\s+/g, "").trim();
+  return normalized === "nto" || normalized === "naotemopiniao";
+}
+
+function cssEscape(value) {
+  if (window.CSS && CSS.escape) return CSS.escape(value);
+  return String(value).replace(/["\\]/g, "\\$&");
 }
 
 function getQuestionAlternatives(question, type) {

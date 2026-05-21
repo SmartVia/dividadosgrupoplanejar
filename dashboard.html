@@ -11,37 +11,17 @@
   <main class="dashboard-shell executive-dashboard">
     <header class="dashboard-hero no-print">
       <div>
-        <p class="eyebrow">Pesquisa de opinião e mercado</p>
+        <p class="eyebrow">Pesquisa quantitativa e qualitativa</p>
         <h1>Dividados Pesquisa</h1>
-        <p class="dashboard-subtitle">Painel executivo de acompanhamento das entrevistas, cotas e resultados.</p>
+        <p class="dashboard-subtitle">Painel executivo com resultados dinâmicos por perfil, perguntas fechadas, semifechadas, escalas, respostas abertas e rankings.</p>
       </div>
       <div class="header-actions">
         <a class="small-link" href="index.html">Formulário</a>
-        <button id="printButton" class="secondary-button" type="button">Gerar PDF</button>
+        <a class="secondary-button report-link" href="relatorio.html" target="_blank">Gerar Relatório PDF</a>
+        <button id="printButton" class="secondary-button" type="button">PDF do Dashboard</button>
         <button id="refreshButton" class="primary-button" type="button">Atualizar dados</button>
       </div>
     </header>
-
-    <section class="print-title print-only">
-      <div>
-        <p class="eyebrow">DIVIDADOS PESQUISA</p>
-        <h1>Relatório Executivo de Pesquisa</h1>
-      </div>
-      <dl class="print-meta">
-        <div>
-          <dt>Cidade</dt>
-          <dd id="printCidade">Todas</dd>
-        </div>
-        <div>
-          <dt>Data</dt>
-          <dd id="printData">--/--/----</dd>
-        </div>
-        <div>
-          <dt>Total de entrevistas</dt>
-          <dd id="printTotalEntrevistas">0</dd>
-        </div>
-      </dl>
-    </section>
 
     <div id="dashboardMessage" class="message no-print" hidden></div>
 
@@ -53,60 +33,23 @@
         </div>
         <button id="clearFiltersButton" class="secondary-button" type="button">Limpar filtros</button>
       </div>
-
       <div class="filter-grid">
-        <label>
-          Cidade
-          <select id="filterCidade"></select>
-        </label>
-        <label>
-          Região/Bairro
-          <select id="filterRegiao"></select>
-        </label>
-        <label>
-          Pesquisador
-          <select id="filterPesquisador"></select>
-        </label>
-        <label>
-          Sexo
-          <select id="filterSexo"></select>
-        </label>
-        <label>
-          Faixa etária
-          <select id="filterFaixaEtaria"></select>
-        </label>
+        <label>Cidade<select id="filterCidade"></select></label>
+        <label>Região/Bairro<select id="filterRegiao"></select></label>
+        <label>Pesquisador<select id="filterPesquisador"></select></label>
+        <label>Sexo<select id="filterSexo"></select></label>
+        <label>Faixa etária<select id="filterFaixaEtaria"></select></label>
       </div>
     </section>
 
     <section class="metric-grid executive-metrics">
-      <article class="metric-card">
-        <span>Total de entrevistas</span>
-        <strong id="totalEntrevistas">0</strong>
-      </article>
-      <article class="metric-card">
-        <span>Total por sexo</span>
-        <strong id="totalSexo">0</strong>
-      </article>
-      <article class="metric-card">
-        <span>Total por faixa etária</span>
-        <strong id="totalFaixa">0</strong>
-      </article>
-      <article class="metric-card">
-        <span>Total por cidade</span>
-        <strong id="totalCidade">0</strong>
-      </article>
-      <article class="metric-card">
-        <span>Total por região/bairro</span>
-        <strong id="totalRegiao">0</strong>
-      </article>
-      <article class="metric-card">
-        <span>Cotas abertas</span>
-        <strong id="cotasAbertas">0</strong>
-      </article>
-      <article class="metric-card">
-        <span>Cotas fechadas</span>
-        <strong id="cotasFechadas">0</strong>
-      </article>
+      <article class="metric-card"><span>Total de entrevistas</span><strong id="totalEntrevistas">0</strong></article>
+      <article class="metric-card"><span>Cidades</span><strong id="totalCidade">0</strong></article>
+      <article class="metric-card"><span>Regiões/Bairros</span><strong id="totalRegiao">0</strong></article>
+      <article class="metric-card"><span>Fechadas/Semifechadas</span><strong id="totalFechadas">0</strong></article>
+      <article class="metric-card"><span>Perguntas escala</span><strong id="totalEscalas">0</strong></article>
+      <article class="metric-card"><span>Aprovação média</span><strong id="aprovacaoMedia">0%</strong></article>
+      <article class="metric-card"><span>Cotas abertas</span><strong id="cotasAbertas">0</strong></article>
     </section>
 
     <section class="dashboard-section">
@@ -117,37 +60,31 @@
         </div>
         <span id="lastUpdated" class="muted-text"></span>
       </div>
-
       <div class="chart-grid executive-charts">
-        <article class="chart-card">
-          <h3>Sexo</h3>
-          <div class="chart-visual pie-visual">
-            <canvas id="sexoChart"></canvas>
-          </div>
+        <article class="chart-card"><h3>Sexo</h3><div class="chart-visual pie-visual"><canvas id="sexoChart"></canvas></div></article>
+        <article class="chart-card"><h3>Faixa etária</h3><div class="chart-visual bar-visual"><canvas id="faixaChart"></canvas></div></article>
+        <article class="chart-card"><h3>Cidade</h3><div class="chart-visual bar-visual"><canvas id="cidadeChart"></canvas></div></article>
+        <article class="chart-card"><h3>Região/Bairro</h3><div class="chart-visual bar-visual"><canvas id="regiaoChart"></canvas></div></article>
+        <article class="chart-card"><h3>Status das cotas</h3><div class="chart-visual pie-visual"><canvas id="cotasChart"></canvas></div></article>
+      </div>
+    </section>
+
+    <section class="dashboard-section">
+      <div class="section-title-row">
+        <div>
+          <p class="eyebrow">Indicadores gerais</p>
+          <h2>Rankings e médias das perguntas escala</h2>
+        </div>
+      </div>
+      <div class="ranking-layout">
+        <article class="insight-card">
+          <h3>Ranking técnico</h3>
+          <p class="muted-text">Menor média técnica = melhor avaliação.</p>
+          <div id="scaleRanking" class="ranking-list"></div>
         </article>
-        <article class="chart-card">
-          <h3>Faixa etária</h3>
-          <div class="chart-visual bar-visual">
-            <canvas id="faixaChart"></canvas>
-          </div>
-        </article>
-        <article class="chart-card">
-          <h3>Cidade</h3>
-          <div class="chart-visual bar-visual">
-            <canvas id="cidadeChart"></canvas>
-          </div>
-        </article>
-        <article class="chart-card">
-          <h3>Região/Bairro</h3>
-          <div class="chart-visual bar-visual">
-            <canvas id="regiaoChart"></canvas>
-          </div>
-        </article>
-        <article class="chart-card">
-          <h3>Status das cotas</h3>
-          <div class="chart-visual pie-visual">
-            <canvas id="cotasStatusChart"></canvas>
-          </div>
+        <article class="insight-card">
+          <h3>Médias por grupo</h3>
+          <div class="chart-visual bar-visual"><canvas id="grupoMediaChart"></canvas></div>
         </article>
       </div>
     </section>
@@ -155,89 +92,32 @@
     <section class="dashboard-section">
       <div class="section-title-row">
         <div>
-          <p class="eyebrow">Perguntas fechadas</p>
-          <h2>Distribuição das alternativas</h2>
+          <p class="eyebrow">Perguntas fechadas e semifechadas</p>
+          <h2>Distribuição quantitativa das alternativas</h2>
         </div>
       </div>
+      <div id="closedQuestionsGrid" class="chart-grid question-chart-grid"></div>
+    </section>
 
-      <div id="questionChartsGrid" class="chart-grid question-chart-grid">
-        <article class="chart-card">
-          <h3>Carregando perguntas...</h3>
-        </article>
-      </div>
-
-      <div class="table-section embedded-table">
-        <div class="section-title-row">
-          <h3>Resumo das Perguntas Fechadas</h3>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Pergunta</th>
-                <th>Alternativa A</th>
-                <th>Alternativa B</th>
-                <th>Alternativa C</th>
-                <th>Alternativa D</th>
-                <th>Total de respostas</th>
-                <th>Alternativa mais votada</th>
-              </tr>
-            </thead>
-            <tbody id="questionsSummaryTableBody">
-              <tr>
-                <td colspan="7">Carregando resumo...</td>
-              </tr>
-            </tbody>
-          </table>
+    <section class="dashboard-section">
+      <div class="section-title-row">
+        <div>
+          <p class="eyebrow">Perguntas escala</p>
+          <h2>Avaliação ponderada, aprovação e reprovação</h2>
         </div>
       </div>
+      <div id="scaleQuestionsGrid" class="chart-grid question-chart-grid"></div>
     </section>
 
     <section class="dashboard-section open-answer-section">
       <div class="section-title-row">
         <div>
           <p class="eyebrow">Qualitativo</p>
-          <h2>Análise das Respostas Abertas</h2>
+          <h2>Análise das perguntas abertas</h2>
         </div>
-        <div class="open-answer-total">
-          <span>Respostas abertas</span>
-          <strong id="totalRespostasAbertas">0</strong>
-        </div>
+        <div class="open-answer-total"><span>Respostas abertas</span><strong id="totalRespostasAbertas">0</strong></div>
       </div>
-
-      <div id="openQuestionCards" class="open-question-grid">
-        <article class="insight-card">
-          <h3>Carregando respostas abertas...</h3>
-        </article>
-      </div>
-
-      <div class="table-section embedded-table open-summary-table">
-        <div class="section-title-row">
-          <div>
-            <p class="eyebrow">Resumo qualitativo</p>
-            <h3>Resumo das Perguntas Abertas</h3>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Código</th>
-                <th>Pergunta</th>
-                <th>Total de respostas</th>
-                <th>Palavra mais citada</th>
-                <th>Principal tema</th>
-                <th>Vazias/sem opinião</th>
-              </tr>
-            </thead>
-            <tbody id="openQuestionsSummaryTableBody">
-              <tr>
-                <td colspan="6">Carregando resumo...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <div id="openQuestionCards" class="open-question-grid"></div>
     </section>
 
     <section class="table-section">
@@ -250,29 +130,14 @@
       <div class="table-wrap">
         <table>
           <thead>
-            <tr>
-              <th>Sexo</th>
-              <th>Faixa etária</th>
-              <th>Meta</th>
-              <th>Realizado</th>
-              <th>Restante</th>
-              <th>Status</th>
-            </tr>
+            <tr><th>Sexo</th><th>Faixa etária</th><th>Meta</th><th>Realizado</th><th>Restante</th><th>Status</th></tr>
           </thead>
-          <tbody id="quotasTableBody">
-            <tr>
-              <td colspan="6">Carregando dados...</td>
-            </tr>
-          </tbody>
+          <tbody id="quotasTableBody"><tr><td colspan="6">Carregando dados...</td></tr></tbody>
         </table>
       </div>
     </section>
   </main>
 
-  <main id="printReport" class="print-report print-only"></main>
-
-  <div class="print-footer print-only">Página <span class="page-number"></span></div>
-
-  <script src="dashboard.js?v=14"></script>
+  <script src="dashboard.js?v=21"></script>
 </body>
 </html>

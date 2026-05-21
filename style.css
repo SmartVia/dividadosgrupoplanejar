@@ -1503,3 +1503,410 @@ td {
   }
 }
 
+/* Arquitetura profissional: contexto, escala, rankings e relatorio */
+.question-context {
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  background: #f0fdfa;
+}
+
+.question-context strong {
+  display: block;
+  color: var(--primary-dark);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+}
+
+.question-context p {
+  margin: 4px 0 0;
+  color: #344054;
+}
+
+.scale-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+}
+
+.scale-options small {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.open-text-question > span {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.other-answer-field {
+  margin-top: 12px;
+  border-top: 1px dashed var(--line);
+  padding-top: 12px;
+  color: var(--primary-dark);
+}
+
+.report-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+}
+
+.ranking-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.1fr);
+  gap: 16px;
+}
+
+.ranking-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.ranking-item {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.ranking-item strong {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--primary);
+}
+
+.ranking-item span {
+  font-weight: 800;
+}
+
+.ranking-item em {
+  color: var(--muted);
+  font-style: normal;
+  font-weight: 800;
+}
+
+.scale-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.scale-kpi-grid div {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.scale-kpi-grid span,
+.scale-kpi-grid small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.scale-kpi-grid strong {
+  display: block;
+  margin: 3px 0;
+  color: #0f172a;
+  font-size: 1.25rem;
+}
+
+.report-page {
+  background: #e5e7eb;
+}
+
+.report-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.report-document {
+  display: grid;
+  gap: 16px;
+  width: min(100%, 900px);
+  margin: 20px auto;
+}
+
+.report-document > .print-page {
+  min-height: 1120px;
+  padding: 44px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.cover-page {
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(135deg, #0f172a, #0f766e);
+  background-size: cover;
+  background-position: center;
+}
+
+.cover-content {
+  display: grid;
+  gap: 14px;
+  width: min(100%, 620px);
+  text-align: center;
+}
+
+.cover-content h1 {
+  font-size: 3rem;
+  text-transform: uppercase;
+}
+
+.cover-content h2 {
+  color: #dff5f1;
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
+.report-logo {
+  max-width: 150px;
+  max-height: 90px;
+  margin: 0 auto 18px;
+}
+
+.cover-meta {
+  display: grid;
+  gap: 4px;
+  margin-top: 34px;
+}
+
+.report-section-title {
+  margin-bottom: 22px;
+  padding-bottom: 12px;
+  border-bottom: 3px solid var(--primary);
+}
+
+.report-section-title h2 {
+  color: #0f172a;
+  font-size: 1.75rem;
+}
+
+.report-text,
+.report-lead {
+  color: #344054;
+  font-size: 1.05rem;
+}
+
+.report-summary {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+  color: #17202a;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.report-kpi-grid,
+.report-chart-grid,
+.report-question-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.report-kpi-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 24px;
+}
+
+.report-chart-card,
+.report-question-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  background: #fff;
+}
+
+.report-chart-card canvas,
+.report-question-card canvas {
+  display: block;
+  margin: 8px auto;
+}
+
+.report-question-card h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.report-context {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.report-legend {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+.report-legend div {
+  display: grid;
+  grid-template-columns: 10px auto 1fr;
+  gap: 7px;
+  align-items: center;
+}
+
+.report-legend span {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.report-scale-kpis {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-bottom: 8px;
+}
+
+.report-scale-kpis span {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 7px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.report-scale-kpis strong {
+  display: block;
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.report-open-layout {
+  display: grid;
+  grid-template-columns: 1.3fr 0.7fr;
+  gap: 18px;
+}
+
+.report-open-list {
+  display: grid;
+  gap: 10px;
+}
+
+.report-open-list > div {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.report-signature {
+  display: grid;
+  gap: 4px;
+  margin-top: 80px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 760px) {
+  .scale-options,
+  .ranking-layout,
+  .scale-kpi-grid,
+  .report-kpi-grid,
+  .report-chart-grid,
+  .report-question-grid,
+  .report-open-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .ranking-item {
+    grid-template-columns: 34px 1fr;
+  }
+
+  .ranking-item em {
+    grid-column: 2;
+  }
+}
+
+@media print {
+  .report-toolbar {
+    display: none !important;
+  }
+
+  .report-page {
+    background: #fff !important;
+  }
+
+  .report-document {
+    display: block;
+    width: 100%;
+    margin: 0;
+  }
+
+  .report-document > .print-page {
+    width: 100%;
+    min-height: 277mm;
+    padding: 0;
+    box-shadow: none;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .cover-page {
+    padding: 16mm !important;
+  }
+
+  .cover-content h1 {
+    font-size: 28pt;
+  }
+
+  .report-section-title h2 {
+    font-size: 17pt;
+  }
+
+  .report-kpi-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4mm;
+  }
+
+  .report-chart-grid,
+  .report-question-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 5mm;
+  }
+
+  .report-chart-card,
+  .report-question-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    padding: 4mm;
+  }
+
+  .report-open-layout {
+    grid-template-columns: 1.25fr 0.75fr;
+    gap: 5mm;
+  }
+
+  .avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
