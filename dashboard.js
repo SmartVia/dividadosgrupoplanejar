@@ -27,7 +27,9 @@ const printCrossButton = document.getElementById("printCrossButton");
 const crossMessage = document.getElementById("crossMessage");
 const crossChartWrap = document.getElementById("crossChartWrap");
 const crossTableWrap = document.getElementById("crossTableWrap");
+const chartModeSelect = document.getElementById("chartModeSelect");
 const charts = {};
+const CHART_MODE_KEY = "dividados_chart_mode";
 
 const filters = {
   cidade: document.getElementById("filterCidade"),
@@ -45,6 +47,13 @@ if (generateCrossButton) generateCrossButton.addEventListener("click", renderCro
 if (exportCrossButton) exportCrossButton.addEventListener("click", exportCrossCsv);
 if (printCrossButton) printCrossButton.addEventListener("click", () => window.print());
 Object.values(filters).forEach((filter) => filter.addEventListener("change", renderDashboard));
+if (chartModeSelect) {
+  chartModeSelect.value = localStorage.getItem(CHART_MODE_KEY) || "pie";
+  chartModeSelect.addEventListener("change", () => {
+    localStorage.setItem(CHART_MODE_KEY, chartModeSelect.value);
+    renderDashboard();
+  });
+}
 document.addEventListener("DOMContentLoaded", () => {
   loadDashboard();
   setInterval(loadDashboard, 30000);
@@ -177,12 +186,15 @@ function renderMetrics(responses, closedQuestions, scaleQuestions, scaleStats) {
 }
 
 function renderProfileCharts(responses) {
-  createChart("sexoChart", "sexo", "doughnut", countBy(responses, "sexo"));
-  createChart("faixaChart", "faixa", "bar", countBy(responses, "faixaEtaria"));
-  createChart("cidadeChart", "cidade", "bar", countBy(responses, "cidade"));
-  createChart("regiaoChart", "regiao", "bar", countBy(responses, "regiao"));
-  createChart("pesquisadorChart", "pesquisador", "bar", countBy(responses, "pesquisador"));
-  createChart("cotasChart", "cotas", "doughnut", countQuotaStatus(dashboardData.quotas));
+  const mode = getChartMode();
+  const categoricalType = mode === "pie" ? "doughnut" : "bar";
+  const tower3d = mode === "tower";
+  createChart("sexoChart", "sexo", categoricalType, countBy(responses, "sexo"), { tower3d });
+  createChart("faixaChart", "faixa", "bar", countBy(responses, "faixaEtaria"), { tower3d });
+  createChart("cidadeChart", "cidade", "bar", countBy(responses, "cidade"), { tower3d });
+  createChart("regiaoChart", "regiao", "bar", countBy(responses, "regiao"), { tower3d });
+  createChart("pesquisadorChart", "pesquisador", "bar", countBy(responses, "pesquisador"), { tower3d });
+  createChart("cotasChart", "cotas", categoricalType, countQuotaStatus(dashboardData.quotas), { tower3d });
 }
 
 function renderResearcherSummary(responses) {
@@ -449,6 +461,7 @@ function renderCrossChart(canvasId, crossTable) {
   if (!canvas) return;
   if (!isChartReady()) return;
   if (charts.cross_table) charts.cross_table.destroy();
+  setChartVisualMode(canvas, getChartMode());
   document.getElementById("crossChartTitle").textContent = `${crossTable.question.code} x ${crossTable.field.label}`;
   charts.cross_table = new Chart(canvas, {
     type: "bar",
@@ -458,13 +471,17 @@ function renderCrossChart(canvasId, crossTable) {
         label: `${row.key} — ${row.label}`,
         data: crossTable.columns.map((column) => row.cells[column.key] || 0),
         backgroundColor: COLORS[row.key] || "#64748b",
-        borderRadius: 6
+        borderRadius: getChartMode() === "tower" ? 9 : 6,
+        borderSkipped: false
       }))
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: "bottom", labels: { boxWidth: 12 } } },
+      plugins: {
+        legend: { position: "bottom", labels: { boxWidth: 12 } },
+        tower3d: { enabled: getChartMode() === "tower" }
+      },
       scales: {
         x: { grid: { display: false } },
         y: { beginAtZero: true, ticks: { precision: 0 } }
@@ -622,8 +639,10 @@ function renderQuestionCard(question, prefix) {
 function createQuestionChart(canvasId, key, counts, question) {
   const source = {};
   getOptionKeys(question).forEach((option) => { source[option] = counts[option] || 0; });
-  createChart(canvasId, key, "doughnut", source, {
-    colors: getOptionKeys(question).map((option) => COLORS[option])
+  const mode = getChartMode();
+  createChart(canvasId, key, mode === "pie" ? "doughnut" : "bar", source, {
+    colors: getOptionKeys(question).map((option) => COLORS[option]),
+    tower3d: mode === "tower"
   });
 }
 
@@ -711,6 +730,7 @@ function createChart(canvasId, key, type, source, options = {}) {
   if (!canvas) return;
   if (!isChartReady()) return;
   if (charts[key]) charts[key].destroy();
+  setChartVisualMode(canvas, options.tower3d ? "tower" : type === "bar" ? "bar" : "pie");
   const labels = Object.keys(source);
   const values = Object.values(source);
   charts[key] = new Chart(canvas, {
@@ -722,7 +742,8 @@ function createChart(canvasId, key, type, source, options = {}) {
         backgroundColor: options.colors || PALETTE,
         borderColor: "#ffffff",
         borderWidth: 2,
-        borderRadius: type === "bar" ? 6 : 0
+        borderRadius: type === "bar" ? (options.tower3d ? 9 : 6) : 0,
+        borderSkipped: false
       }]
     },
     options: {
@@ -732,7 +753,8 @@ function createChart(canvasId, key, type, source, options = {}) {
       devicePixelRatio: Math.max(window.devicePixelRatio || 1, 2),
       animation: false,
       plugins: {
-        legend: { display: type !== "bar", position: "bottom", labels: { boxWidth: 12, padding: 12 } }
+        legend: { display: type !== "bar", position: "bottom", labels: { boxWidth: 12, padding: 12 } },
+        tower3d: { enabled: Boolean(options.tower3d) }
       },
       scales: type === "bar" ? {
         x: { grid: { display: false }, ticks: { maxRotation: 30, minRotation: 0 } },
@@ -744,6 +766,38 @@ function createChart(canvasId, key, type, source, options = {}) {
       } : {}
     }
   });
+}
+
+const tower3dPlugin = {
+  id: "tower3d",
+  beforeDatasetDraw(chart, args, pluginOptions) {
+    if (!pluginOptions?.enabled) return;
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.shadowColor = "rgba(15, 23, 42, 0.24)";
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetX = 7;
+    ctx.shadowOffsetY = 5;
+  },
+  afterDatasetDraw(chart, args, pluginOptions) {
+    if (!pluginOptions?.enabled) return;
+    chart.ctx.restore();
+  }
+};
+
+if (typeof Chart !== "undefined") {
+  Chart.register(tower3dPlugin);
+}
+
+function getChartMode() {
+  return chartModeSelect?.value || localStorage.getItem(CHART_MODE_KEY) || "pie";
+}
+
+function setChartVisualMode(canvas, mode) {
+  const wrap = canvas.parentElement;
+  if (!wrap) return;
+  wrap.classList.toggle("chart-tower-3d", mode === "tower");
+  wrap.classList.toggle("chart-bar-mode", mode === "bar");
 }
 
 function renderQuotas() {

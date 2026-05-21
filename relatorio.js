@@ -4,6 +4,7 @@ const COLORS = { A: "#16a34a", B: "#2563eb", C: "#f97316", D: "#7c3aed", E: "#dc
 const PALETTE = ["#0f766e", "#2563eb", "#d97706", "#7c3aed", "#be123c", "#475569"];
 const reportRoot = document.getElementById("reportRoot");
 const printReportButton = document.getElementById("printReportButton");
+const reportChartModeSelect = document.getElementById("reportChartMode");
 const reportCharts = {};
 let state = { responses: [], quotas: [], questions: [], report: {} };
 
@@ -11,6 +12,12 @@ printReportButton.addEventListener("click", async () => {
   await wait(500);
   window.print();
 });
+if (reportChartModeSelect) {
+  reportChartModeSelect.addEventListener("change", () => {
+    destroyReportCharts();
+    renderCharts();
+  });
+}
 
 document.addEventListener("DOMContentLoaded", loadReport);
 
@@ -145,16 +152,22 @@ function renderCharts() {
     reportRoot.insertAdjacentHTML("afterbegin", '<div class="message error no-print">A biblioteca de graficos nao carregou. Atualize a pagina com Ctrl+F5 e tente novamente.</div>');
     return;
   }
-  createChart("profile_sexo", "doughnut", countBy(state.responses, "sexo"));
-  createChart("profile_faixa", "bar", countBy(state.responses, "faixaEtaria"));
-  createChart("profile_cidade", "bar", countBy(state.responses, "cidade"));
-  createChart("profile_regiao", "bar", countBy(state.responses, "regiao"));
+  const mode = getReportChartMode();
+  const categoricalType = mode === "pie" ? "doughnut" : "bar";
+  const tower3d = mode === "tower";
+  createChart("profile_sexo", categoricalType, countBy(state.responses, "sexo"), null, { tower3d });
+  createChart("profile_faixa", "bar", countBy(state.responses, "faixaEtaria"), null, { tower3d });
+  createChart("profile_cidade", "bar", countBy(state.responses, "cidade"), null, { tower3d });
+  createChart("profile_regiao", "bar", countBy(state.responses, "regiao"), null, { tower3d });
 
   questionsByTypes(["fechada", "semifechada"]).forEach((question) => {
     createQuestionChart(`chart_closed_${question.code}`, countQuestion(question), question);
   });
   questionsByType("escala").forEach((question) => {
     createQuestionChart(`chart_scale_${question.code}`, countQuestion(question), question);
+  });
+  getAutomaticCrossTables().forEach((crossTable) => {
+    createCrossChart(crossChartId(crossTable), crossTable);
   });
 }
 
@@ -259,7 +272,14 @@ function reportCrossBlock(crossTable) {
     <article class="report-cross-card avoid-break">
       <h3>${escapeHtml(crossTable.question.code)} x ${escapeHtml(crossTable.field.label)}</h3>
       <p>${escapeHtml(crossTable.question.text)}</p>
-      ${renderReportCrossTable(crossTable)}
+      <div class="report-cross-content">
+        <div class="report-cross-chart-wrap">
+          <canvas id="${crossChartId(crossTable)}" width="620" height="230"></canvas>
+        </div>
+        <div class="report-cross-table-wrap">
+          ${renderReportCrossTable(crossTable)}
+        </div>
+      </div>
     </article>
   `;
 }
@@ -301,15 +321,17 @@ function legend(question, counts) {
 
 function createQuestionChart(canvasId, counts, question) {
   const keys = optionKeys(question);
-  createChart(canvasId, "doughnut", keys.reduce((acc, key) => {
+  const mode = getReportChartMode();
+  createChart(canvasId, mode === "pie" ? "doughnut" : "bar", keys.reduce((acc, key) => {
     acc[key] = counts[key] || 0;
     return acc;
-  }, {}), keys.map((key) => COLORS[key]));
+  }, {}), keys.map((key) => COLORS[key]), { tower3d: mode === "tower" });
 }
 
-function createChart(canvasId, type, source, colors) {
+function createChart(canvasId, type, source, colors, options = {}) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
+  setReportChartVisualMode(canvas, options.tower3d ? "tower" : type === "bar" ? "bar" : "pie");
   const labels = Object.keys(source);
   const values = Object.values(source);
   const total = values.reduce((sum, value) => sum + Number(value || 0), 0);
@@ -320,17 +342,101 @@ function createChart(canvasId, type, source, colors) {
     type,
     data: {
       labels: chartLabels,
-      datasets: [{ data: chartValues, backgroundColor: chartColors, borderColor: "#fff", borderWidth: 2, borderRadius: type === "bar" ? 6 : 0 }]
+      datasets: [{ data: chartValues, backgroundColor: chartColors, borderColor: "#fff", borderWidth: 2, borderRadius: type === "bar" ? (options.tower3d ? 8 : 6) : 0, borderSkipped: false }]
     },
     options: {
       responsive: false,
       maintainAspectRatio: true,
       animation: false,
       devicePixelRatio: 4,
-      plugins: { legend: { display: type !== "bar" && total > 0, position: "bottom", labels: { boxWidth: 9, font: { size: 9 } } } },
+      plugins: {
+        legend: { display: type !== "bar" && total > 0, position: "bottom", labels: { boxWidth: 9, font: { size: 9 } } },
+        tower3d: { enabled: Boolean(options.tower3d) }
+      },
       scales: type === "bar" ? { x: { grid: { display: false }, ticks: { font: { size: 9 } } }, y: { beginAtZero: true, ticks: { precision: 0, font: { size: 9 } } } } : {}
     }
   });
+}
+
+function createCrossChart(canvasId, crossTable) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const tower3d = getReportChartMode() === "tower";
+  setReportChartVisualMode(canvas, tower3d ? "tower" : "bar");
+  const datasets = crossTable.rows
+    .filter((row) => row.total > 0)
+    .map((row) => ({
+      label: `${row.key} - ${row.label}`,
+      data: crossTable.columns.map((column) => row.cells[column.key] || 0),
+      backgroundColor: COLORS[row.key] || "#64748b",
+      borderRadius: tower3d ? 8 : 5,
+      borderSkipped: false
+    }));
+
+  reportCharts[canvasId] = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: crossTable.columns.map((column) => column.label),
+      datasets: datasets.length ? datasets : [{ label: "Sem respostas", data: [0], backgroundColor: "#e5e7eb" }]
+    },
+    options: {
+      responsive: false,
+      maintainAspectRatio: true,
+      animation: false,
+      devicePixelRatio: 4,
+      plugins: {
+        legend: { position: "bottom", labels: { boxWidth: 9, font: { size: 9 } } },
+        tower3d: { enabled: tower3d }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 20, minRotation: 0 } },
+        y: { beginAtZero: true, ticks: { precision: 0, font: { size: 9 } } }
+      }
+    }
+  });
+}
+
+const reportTower3dPlugin = {
+  id: "tower3d",
+  beforeDatasetDraw(chart, args, pluginOptions) {
+    if (!pluginOptions?.enabled) return;
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.shadowColor = "rgba(15, 23, 42, 0.24)";
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetX = 7;
+    ctx.shadowOffsetY = 5;
+  },
+  afterDatasetDraw(chart, args, pluginOptions) {
+    if (!pluginOptions?.enabled) return;
+    chart.ctx.restore();
+  }
+};
+
+if (typeof Chart !== "undefined") {
+  Chart.register(reportTower3dPlugin);
+}
+
+function getReportChartMode() {
+  return reportChartModeSelect?.value || "pie";
+}
+
+function setReportChartVisualMode(canvas, mode) {
+  const wrap = canvas.parentElement;
+  if (!wrap) return;
+  wrap.classList.toggle("chart-tower-3d", mode === "tower");
+  wrap.classList.toggle("chart-bar-mode", mode === "bar");
+}
+
+function destroyReportCharts() {
+  Object.keys(reportCharts).forEach((key) => {
+    reportCharts[key].destroy();
+    delete reportCharts[key];
+  });
+}
+
+function crossChartId(crossTable) {
+  return `cross_${crossTable.question.code}_${crossTable.field.key}`.replace(/[^a-zA-Z0-9_-]/g, "_");
 }
 
 function textPage(title, html) {

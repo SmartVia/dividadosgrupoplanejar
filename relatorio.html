@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Relatório Executivo - Dividados Pesquisa</title>
-  <link rel="stylesheet" href="style.css?v=4">
+  <link rel="stylesheet" href="style.css?v=6">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     if (!window.Chart) {
@@ -15,6 +15,14 @@
 <body class="report-page">
   <div class="report-toolbar no-print">
     <a class="small-link" href="dashboard.html">Voltar ao dashboard</a>
+    <label class="visual-control report-visual-control">
+      Tipo de gráfico do relatório
+      <select id="reportChartMode">
+        <option value="pie">Pizza</option>
+        <option value="bar">Barra vertical</option>
+        <option value="tower">Torre 3D</option>
+      </select>
+    </label>
     <button id="printReportButton" class="primary-button" type="button">Imprimir / Salvar PDF</button>
   </div>
 
@@ -26,6 +34,6 @@
   </main>
 
   <script src="api-client.js?v=1"></script>
-  <script src="relatorio.js?v=9"></script>
+  <script src="relatorio.js?v=10"></script>
 </body>
 </html>

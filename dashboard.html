@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - Dividados Pesquisa</title>
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     if (!window.Chart) {
@@ -36,7 +36,17 @@
           <p class="eyebrow">Filtros</p>
           <h2>Segmentação dos resultados</h2>
         </div>
-        <button id="clearFiltersButton" class="secondary-button" type="button">Limpar filtros</button>
+        <div class="filter-actions">
+          <label class="visual-control">
+            Visualização do gráfico
+            <select id="chartModeSelect">
+              <option value="pie">Pizza</option>
+              <option value="bar">Barra vertical</option>
+              <option value="tower">Torre 3D</option>
+            </select>
+          </label>
+          <button id="clearFiltersButton" class="secondary-button" type="button">Limpar filtros</button>
+        </div>
       </div>
       <div class="filter-grid">
         <label>Cidade<select id="filterCidade"></select></label>
@@ -180,6 +190,6 @@
   </main>
 
   <script src="api-client.js?v=1"></script>
-  <script src="dashboard.js?v=30"></script>
+  <script src="dashboard.js?v=31"></script>
 </body>
 </html>
