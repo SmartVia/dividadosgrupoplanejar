@@ -260,13 +260,16 @@ function setFilterOptions(select, values, allLabel) {
     .map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)
     .join("");
 
-  if (values.includes(currentValue)) {
-    select.value = currentValue;
+  const matchingValue = currentValue ? values.find((value) => sameNormalizedValue(value, currentValue)) : "";
+  if (matchingValue) {
+    select.value = matchingValue;
   }
 }
 
 function uniqueValues(rows, field) {
-  return [...new Set(rows.map((row) => row[field]).filter(Boolean))]
+  const grouped = groupTextValues(rows, field);
+  return Object.values(grouped)
+    .map((item) => item.label)
     .sort((a, b) => String(a).localeCompare(String(b), "pt-BR"));
 }
 
@@ -279,11 +282,11 @@ function clearFilters() {
 
 function getFilteredResponses() {
   return dashboardData.responses.filter((row) => {
-    return (!filters.cidade.value || row.cidade === filters.cidade.value)
-      && (!filters.regiao.value || row.regiao === filters.regiao.value)
-      && (!filters.pesquisador.value || row.pesquisador === filters.pesquisador.value)
-      && (!filters.sexo.value || row.sexo === filters.sexo.value)
-      && (!filters.faixaEtaria.value || row.faixaEtaria === filters.faixaEtaria.value);
+    return (!filters.cidade.value || sameNormalizedValue(row.cidade, filters.cidade.value))
+      && (!filters.regiao.value || sameNormalizedValue(row.regiao, filters.regiao.value))
+      && (!filters.pesquisador.value || sameNormalizedValue(row.pesquisador, filters.pesquisador.value))
+      && (!filters.sexo.value || sameNormalizedValue(row.sexo, filters.sexo.value))
+      && (!filters.faixaEtaria.value || sameNormalizedValue(row.faixaEtaria, filters.faixaEtaria.value));
   });
 }
 
@@ -1191,11 +1194,14 @@ function renderQuotas(quotas) {
 }
 
 function countBy(rows, field) {
-  return rows.reduce((acc, row) => {
-    const key = String(row[field] || "Nao informado").trim() || "Nao informado";
-    acc[key] = (acc[key] || 0) + 1;
-    return acc;
-  }, {});
+  const grouped = groupTextValues(rows, field);
+
+  return Object.values(grouped)
+    .sort((a, b) => String(a.label).localeCompare(String(b.label), "pt-BR"))
+    .reduce((acc, item) => {
+      acc[item.label] = item.count;
+      return acc;
+    }, {});
 }
 
 function countQuestion(rows, field) {
@@ -1299,6 +1305,72 @@ function detectThemes(text) {
 
 function countOccurrences(text, term) {
   return (text.match(new RegExp(`\\b${term}\\b`, "g")) || []).length;
+}
+
+function groupTextValues(rows, field) {
+  return rows.reduce((acc, row) => {
+    const rawValue = String(row[field] || "").replace(/\s+/g, " ").trim();
+    const key = normalizeGroupKey(rawValue || "Nao informado");
+
+    if (!acc[key]) {
+      acc[key] = {
+        label: rawValue ? formatDisplayLabel(rawValue) : "Nao informado",
+        count: 0
+      };
+    } else {
+      acc[key].label = chooseBestLabel(acc[key].label, rawValue);
+    }
+
+    acc[key].count += 1;
+    return acc;
+  }, {});
+}
+
+function normalizeGroupKey(value) {
+  return normalizeText(value)
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim() || "nao informado";
+}
+
+function sameNormalizedValue(a, b) {
+  if (!b) return false;
+  return normalizeGroupKey(a) === normalizeGroupKey(b);
+}
+
+function chooseBestLabel(currentLabel, incomingLabel) {
+  const current = String(currentLabel || "").trim();
+  const incoming = String(incomingLabel || "").trim();
+  if (!incoming) return current || "Nao informado";
+  if (!current || normalizeGroupKey(current) === "nao informado") return formatDisplayLabel(incoming);
+
+  const currentScore = labelQualityScore(current);
+  const incomingFormatted = formatDisplayLabel(incoming);
+  const incomingScore = labelQualityScore(incomingFormatted);
+  return incomingScore > currentScore ? incomingFormatted : current;
+}
+
+function labelQualityScore(label) {
+  const text = String(label || "");
+  const hasAccent = text !== text.normalize("NFD").replace(/[\u0300-\u036f]/g, "") ? 2 : 0;
+  const hasUppercase = /[A-Z]/.test(text) ? 1 : 0;
+  return text.length + hasAccent + hasUppercase;
+}
+
+function formatDisplayLabel(value) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (!text) return "Nao informado";
+
+  const lowercaseWords = new Set(["de", "da", "do", "das", "dos", "e"]);
+
+  return text
+    .toLocaleLowerCase("pt-BR")
+    .split(" ")
+    .map((word, index) => {
+      if (index > 0 && lowercaseWords.has(word)) return word;
+      return word.charAt(0).toLocaleUpperCase("pt-BR") + word.slice(1);
+    })
+    .join(" ");
 }
 
 function normalizeText(value) {

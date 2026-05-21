@@ -4,6 +4,22 @@ const API_URL = "https://script.google.com/macros/s/AKfycby1iZyydOBfSrNpKPx0HulX
 
 const OFFLINE_QUEUE_KEY = "dividados_offline_queue_v1";
 const MAX_CLOSED_QUESTIONS = 100;
+const CITY_CACHE_KEY = "dividados_mg_cities_v1";
+const MG_CITIES_API_URL = "https://servicodados.ibge.gov.br/api/v1/localidades/estados/MG/municipios";
+const MG_CITIES_FALLBACK = [
+  "Belo Horizonte",
+  "Betim",
+  "Contagem",
+  "Divinópolis",
+  "Governador Valadares",
+  "Itaúna",
+  "Juiz de Fora",
+  "Montes Claros",
+  "Nova Lima",
+  "Sete Lagoas",
+  "Uberaba",
+  "Uberlândia"
+];
 
 const form = document.getElementById("surveyForm");
 const messageBox = document.getElementById("message");
@@ -15,6 +31,9 @@ const offlineBox = document.getElementById("offlineBox");
 const connectionStatus = document.getElementById("connectionStatus");
 const pendingCountText = document.getElementById("pendingCountText");
 const syncNowButton = document.getElementById("syncNowButton");
+const cidadeInput = document.getElementById("cidade");
+const regiaoInput = document.getElementById("regiao");
+const cidadeOptions = document.getElementById("cidadeOptions");
 
 let quotaIsOpen = false;
 let syncInProgress = false;
@@ -34,6 +53,8 @@ function initializeOfflineMode() {
   updateConnectionBox();
   updatePendingCount();
   loadQuestions();
+  setupLocationFields();
+  loadCityOptions();
 
   if (navigator.onLine) {
     syncPendingResponses();
@@ -232,10 +253,13 @@ function getCachedQuestions() {
 }
 
 function getProfileData() {
+  cidadeInput.value = formatPlaceName(cidadeInput.value);
+  regiaoInput.value = formatPlaceName(regiaoInput.value);
+
   return {
     pesquisador: document.getElementById("pesquisador").value.trim(),
-    cidade: document.getElementById("cidade").value.trim(),
-    regiao: document.getElementById("regiao").value.trim(),
+    cidade: cidadeInput.value.trim(),
+    regiao: regiaoInput.value.trim(),
     endereco: document.getElementById("endereco").value.trim(),
     sexo: document.getElementById("sexo").value,
     faixaEtaria: document.getElementById("faixaEtaria").value
@@ -354,8 +378,8 @@ function buildSurveyPayload(origin) {
     uniqueId,
     dataHora: new Date().toISOString(),
     pesquisador: formData.get("pesquisador").trim(),
-    cidade: formData.get("cidade").trim(),
-    regiao: formData.get("regiao").trim(),
+    cidade: formatPlaceName(formData.get("cidade")),
+    regiao: formatPlaceName(formData.get("regiao")),
     endereco: formData.get("endereco").trim(),
     sexo: formData.get("sexo"),
     faixaEtaria: formData.get("faixaEtaria"),
@@ -370,6 +394,70 @@ function buildSurveyPayload(origin) {
     origem: origin,
     statusSincronizacao: origin === "Offline" ? "Pendente" : "Sincronizada"
   };
+}
+
+function setupLocationFields() {
+  [cidadeInput, regiaoInput].forEach((input) => {
+    input.addEventListener("blur", () => {
+      input.value = formatPlaceName(input.value);
+    });
+  });
+}
+
+async function loadCityOptions() {
+  const cachedCities = getCachedCities();
+  populateCityOptions(cachedCities.length ? cachedCities : MG_CITIES_FALLBACK);
+
+  if (!navigator.onLine) return;
+
+  try {
+    const response = await fetch(MG_CITIES_API_URL);
+    if (!response.ok) throw new Error("Nao foi possivel carregar municipios de MG.");
+
+    const cities = (await response.json())
+      .map((city) => city.nome)
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+    if (cities.length) {
+      localStorage.setItem(CITY_CACHE_KEY, JSON.stringify(cities));
+      populateCityOptions(cities);
+    }
+  } catch (error) {
+    console.warn("Nao foi possivel carregar cidades do IBGE. Usando cache/lista basica.", error);
+  }
+}
+
+function getCachedCities() {
+  try {
+    return JSON.parse(localStorage.getItem(CITY_CACHE_KEY)) || [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function populateCityOptions(cities) {
+  if (!cidadeOptions) return;
+
+  cidadeOptions.innerHTML = cities
+    .map((city) => `<option value="${escapeHtml(city)}"></option>`)
+    .join("");
+}
+
+function formatPlaceName(value) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+
+  const lowercaseWords = new Set(["de", "da", "do", "das", "dos", "e"]);
+
+  return text
+    .toLocaleLowerCase("pt-BR")
+    .split(" ")
+    .map((word, index) => {
+      if (index > 0 && lowercaseWords.has(word)) return word;
+      return word.charAt(0).toLocaleUpperCase("pt-BR") + word.slice(1);
+    })
+    .join(" ");
 }
 
 function collectQuestionAnswers(formData) {
