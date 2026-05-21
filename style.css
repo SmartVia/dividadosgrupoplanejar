@@ -1895,6 +1895,10 @@ td {
   gap: 16px;
 }
 
+.ranking-layout.ranking-only {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .ranking-list {
   display: grid;
   gap: 10px;

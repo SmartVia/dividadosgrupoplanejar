@@ -538,8 +538,6 @@ function renderScaleRanking(scaleStats) {
     `).join("");
   }
 
-  const groupStats = calculateGroupScaleStats(ranked);
-  createChart("grupoMediaChart", "grupoMedia", "bar", groupStats, { reverseScale: true });
 }
 
 function renderOpenQuestions(responses, questions, semiQuestions = []) {
@@ -814,20 +812,6 @@ function groupTextValues(rows, field) {
     const key = field === "pesquisador" ? normalizePersonKey(rawValue || "Nao informado") : normalizeGroupKey(rawValue || "Nao informado");
     if (!acc[key]) acc[key] = { label: rawValue ? formatDisplayLabel(rawValue) : "Nao informado", count: 0 };
     acc[key].count += 1;
-    return acc;
-  }, {});
-}
-
-function calculateGroupScaleStats(scaleStats) {
-  const groups = {};
-  scaleStats.forEach((item) => {
-    if (!item.validResponses) return;
-    const group = item.question.group || "Geral";
-    if (!groups[group]) groups[group] = [];
-    groups[group].push(item.technicalAverage);
-  });
-  return Object.entries(groups).reduce((acc, [group, values]) => {
-    acc[group] = Number(formatNumber(average(values)));
     return acc;
   }, {});
 }
