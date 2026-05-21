@@ -1,4 +1,4 @@
-/*
+﻿/*
   Dividados Pesquisa - Backend Google Apps Script
 
   Como usar:
@@ -9,7 +9,7 @@
   3. Cole o ID da planilha na constante SPREADSHEET_ID abaixo.
      O ID fica na URL da planilha, entre /d/ e /edit.
   4. Publique este script como Aplicativo da Web.
-     Execute como: você mesmo.
+     Execute como: vocÃª mesmo.
      Quem tem acesso: qualquer pessoa com o link.
   5. Cole a URL publicada em API_URL nos arquivos script.js e dashboard.js.
 */
@@ -68,10 +68,12 @@ function handleRequest_(e) {
       result = submitResponse_(payload);
     } else if (action === "getQuestions") {
       result = getQuestionsData_();
+    } else if (action === "getQuotas") {
+      result = getQuotasData_();
     } else if (action === "dashboard") {
       result = getDashboardData_();
     } else {
-      result = { ok: false, error: "invalid_action", message: "Ação inválida ou não informada." };
+      result = { ok: false, error: "invalid_action", message: "AÃ§Ã£o invÃ¡lida ou nÃ£o informada." };
     }
   } catch (error) {
     result = {
@@ -127,7 +129,7 @@ function checkQuota_(payload) {
       ok: false,
       open: false,
       error: "quota_not_found",
-      message: "Cota não encontrada para este perfil. Confira Sexo e FaixaEtaria na aba Cotas."
+      message: "Cota nÃ£o encontrada para este perfil. Confira Sexo e FaixaEtaria na aba Cotas."
     };
   }
 
@@ -203,7 +205,7 @@ function getDashboardData_() {
   const quotasSheet = getRequiredSheet_(spreadsheet, SHEETS.quotas);
   const responses = getSheetObjects_(responsesSheet);
   const responseRows = responses.map(function(row) {
-    return {
+    const item = {
       UniqueId: row.UniqueId || "",
       DataHora: formatDateValue_(row.DataHora),
       Pesquisador: row.Pesquisador || "",
@@ -222,17 +224,19 @@ function getDashboardData_() {
       Origem: row.Origem || "",
       StatusSincronizacao: row.StatusSincronizacao || ""
     };
+
+    for (let i = 1; i <= 100; i++) {
+      item["P" + i] = row["P" + i] || "";
+    }
+
+    for (let i = 1; i <= 20; i++) {
+      item["RA" + i] = row["RA" + i] || "";
+      item["RespostaAberta" + i] = row["RespostaAberta" + i] || "";
+    }
+
+    return item;
   });
-  const quotas = getSheetObjects_(quotasSheet).map(function(row) {
-    return {
-      sexo: row.Sexo || "",
-      faixaEtaria: row.FaixaEtaria || "",
-      meta: Number(row.Meta) || 0,
-      realizado: Number(row.Realizado) || 0,
-      restante: Number(row.Restante) || 0,
-      status: row.Status || ""
-    };
-  });
+  const quotas = getNormalizedQuotas_(quotasSheet);
 
   return {
     ok: true,
@@ -246,6 +250,28 @@ function getDashboardData_() {
   };
 }
 
+function getQuotasData_() {
+  const spreadsheet = getSpreadsheet_();
+  const quotasSheet = getRequiredSheet_(spreadsheet, SHEETS.quotas);
+  return {
+    ok: true,
+    quotas: getNormalizedQuotas_(quotasSheet)
+  };
+}
+
+function getNormalizedQuotas_(quotasSheet) {
+  return getSheetObjects_(quotasSheet).map(function(row) {
+    return {
+      sexo: row.Sexo || "",
+      faixaEtaria: row.FaixaEtaria || "",
+      meta: Number(row.Meta) || 0,
+      realizado: Number(row.Realizado) || 0,
+      restante: Number(row.Restante) || 0,
+      status: row.Status || ""
+    };
+  });
+}
+
 function getQuestionsData_() {
   const spreadsheet = getSpreadsheet_();
   const questionsSheet = getRequiredSheet_(spreadsheet, SHEETS.questions);
@@ -254,12 +280,16 @@ function getQuestionsData_() {
   const questions = rows.map(function(row, index) {
     return {
       id: row.ID || row.Id || row.id || ("P" + (index + 1)),
+      grupo: row.Grupo || row.grupo || "Geral",
+      contexto: row.Contexto || row.contexto || "",
       pergunta: row.Pergunta || row.pergunta || "",
       tipo: row.Tipo || row.tipo || "Fechada",
-      a: row.A || row.AlternativaA || row["Alternativa A"] || "Alternativa A",
-      b: row.B || row.AlternativaB || row["Alternativa B"] || "Alternativa B",
-      c: row.C || row.AlternativaC || row["Alternativa C"] || "Alternativa C",
-      d: row.D || row.AlternativaD || row["Alternativa D"] || "Alternativa D",
+      a: row.A || row.AlternativaA || row["Alternativa A"] || "",
+      b: row.B || row.AlternativaB || row["Alternativa B"] || "",
+      c: row.C || row.AlternativaC || row["Alternativa C"] || "",
+      d: row.D || row.AlternativaD || row["Alternativa D"] || "",
+      e: row.E || row.AlternativaE || row["Alternativa E"] || "",
+      f: row.F || row.AlternativaF || row["Alternativa F"] || "",
       ativa: row.Ativa || row.ativa || "Sim",
       ordem: Number(row.Ordem || row.ordem || index + 1)
     };
@@ -295,7 +325,7 @@ function getRequiredSheet_(spreadsheet, sheetName) {
   const sheet = spreadsheet.getSheetByName(sheetName);
 
   if (!sheet) {
-    throw new Error(`Aba "${sheetName}" não encontrada. Crie as abas: Respostas, Cotas, Pesquisadores e Perguntas.`);
+    throw new Error(`Aba "${sheetName}" nÃ£o encontrada. Crie as abas: Respostas, Cotas, Pesquisadores e Perguntas.`);
   }
 
   return sheet;
@@ -362,7 +392,7 @@ function validateRequiredResponse_(payload) {
 
   const respostas = parseRespostas_(payload);
   const unanswered = respostas.filter(function(item) {
-    return !item.resposta;
+    return !isOpenQuestionType_(item.tipo || item.type || "") && !item.resposta;
   });
 
   if (missing.length || unanswered.length) {
@@ -372,7 +402,7 @@ function validateRequiredResponse_(payload) {
 
 function appendDynamicResponse_(sheet, payload, uniqueId) {
   const respostas = parseRespostas_(payload);
-  const headers = ensureDynamicResponseColumns_(sheet, respostas.length);
+  const headers = ensureDynamicResponseColumns_(sheet, respostas);
   const rowObject = {
     UniqueId: uniqueId,
     DataHora: payload.dataHora ? new Date(payload.dataHora) : new Date(),
@@ -392,9 +422,37 @@ function appendDynamicResponse_(sheet, payload, uniqueId) {
     rowObject["P" + i] = "";
   }
 
+  for (let i = 1; i <= 20; i++) {
+    rowObject["RA" + i] = "";
+    rowObject["RespostaAberta" + i] = "";
+  }
+
   respostas.forEach(function(item, index) {
+    const code = String(item.campo || item.id || "").toUpperCase();
+    const value = item.resposta || item.respostaAberta || "";
+    const isOpen = isOpenQuestionType_(item.tipo || item.type || "");
+
+    if (/^P\d+$/.test(code) && !isOpen) {
+      rowObject[code] = value;
+      return;
+    }
+
+    if (/^RA\d+$/.test(code) || (/^P\d+$/.test(code) && isOpen)) {
+      const number = Number(code.replace(/\D/g, ""));
+      rowObject[code] = value;
+
+      if (number >= 1 && number <= 20) {
+        rowObject["RespostaAberta" + number] = value;
+      }
+
+      if (!rowObject.RespostaAberta) {
+        rowObject.RespostaAberta = value;
+      }
+      return;
+    }
+
     if (index < 100) {
-      rowObject["P" + (index + 1)] = item.resposta || "";
+      rowObject["P" + (index + 1)] = value;
     }
   });
 
@@ -494,7 +552,7 @@ function getSheetObjects_(sheet) {
 
 function countBy_(rows, field) {
   return rows.reduce(function(acc, row) {
-    const key = String(row[field] || "Não informado").trim() || "Não informado";
+    const key = String(row[field] || "NÃ£o informado").trim() || "NÃ£o informado";
     acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {});
@@ -508,7 +566,16 @@ function getColumnMap_(headers) {
 }
 
 function normalizeText_(value) {
-  return String(value || "").trim().toLowerCase();
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function isOpenQuestionType_(type) {
+  const normalized = normalizeText_(type);
+  return normalized === "aberta" || normalized === "abertatexto" || normalized === "texto";
 }
 
 function ensureResponseHeaders_(sheet) {
@@ -526,7 +593,7 @@ function ensureResponseHeaders_(sheet) {
     return String(header).trim();
   });
 
-  // Migra planilhas antigas que começavam em DataHora para o novo formato com UniqueId.
+  // Migra planilhas antigas que comeÃ§avam em DataHora para o novo formato com UniqueId.
   if (headers[0] === "DataHora") {
     sheet.insertColumnBefore(1);
     sheet.getRange(1, 1).setValue("UniqueId");
@@ -544,9 +611,18 @@ function ensureResponseHeaders_(sheet) {
   if (currentHeaders.indexOf("StatusSincronizacao") === -1) {
     sheet.getRange(1, sheet.getLastColumn() + 1).setValue("StatusSincronizacao");
   }
+
+  RESPONSE_HEADERS.forEach(function(header) {
+    const latestHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(function(value) {
+      return String(value).trim();
+    });
+    if (latestHeaders.indexOf(header) === -1) {
+      sheet.getRange(1, sheet.getLastColumn() + 1).setValue(header);
+    }
+  });
 }
 
-function ensureDynamicResponseColumns_(sheet, questionCount) {
+function ensureDynamicResponseColumns_(sheet, answersOrCount) {
   ensureResponseHeaders_(sheet);
 
   let headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(function(header) {
@@ -554,10 +630,27 @@ function ensureDynamicResponseColumns_(sheet, questionCount) {
   });
 
   const columnsToEnsure = [];
-  const maxQuestions = Math.min(Number(questionCount) || 0, 100);
+  const maxQuestions = Math.min(Array.isArray(answersOrCount) ? answersOrCount.length : Number(answersOrCount) || 0, 100);
 
   for (let i = 1; i <= maxQuestions; i++) {
     columnsToEnsure.push("P" + i);
+  }
+
+  if (Array.isArray(answersOrCount)) {
+    answersOrCount.forEach(function(item) {
+      const code = String(item.campo || item.id || "").toUpperCase();
+      const isOpen = isOpenQuestionType_(item.tipo || item.type || "");
+      if (/^P\d+$/.test(code)) {
+        columnsToEnsure.push(code);
+      }
+      if ((/^RA\d+$/.test(code) || (/^P\d+$/.test(code) && isOpen)) && Number(code.replace(/\D/g, "")) <= 20) {
+        columnsToEnsure.push("RespostaAberta" + Number(code.replace(/\D/g, "")));
+      }
+    });
+  }
+
+  for (let i = 1; i <= 20; i++) {
+    columnsToEnsure.push("RA" + i, "RespostaAberta" + i);
   }
 
   columnsToEnsure.push("RespostaAberta", "RespostasJson", "Origem", "StatusSincronizacao");
@@ -573,3 +666,4 @@ function ensureDynamicResponseColumns_(sheet, questionCount) {
     return String(header).trim();
   });
 }
+

@@ -368,9 +368,11 @@ function getCachedQuestions() {
 function getProfileData() {
   cidadeInput.value = formatPlaceName(cidadeInput.value);
   regiaoInput.value = formatPlaceName(regiaoInput.value);
+  const pesquisadorInput = document.getElementById("pesquisador");
+  pesquisadorInput.value = formatPersonName(pesquisadorInput.value);
 
   return {
-    pesquisador: document.getElementById("pesquisador").value.trim(),
+    pesquisador: pesquisadorInput.value.trim(),
     cidade: cidadeInput.value.trim(),
     regiao: regiaoInput.value.trim(),
     endereco: document.getElementById("endereco").value.trim(),
@@ -490,7 +492,7 @@ function buildSurveyPayload(origin) {
   return {
     uniqueId,
     dataHora: new Date().toISOString(),
-    pesquisador: formData.get("pesquisador").trim(),
+    pesquisador: formatPersonName(formData.get("pesquisador")),
     cidade: formatPlaceName(formData.get("cidade")),
     regiao: formatPlaceName(formData.get("regiao")),
     endereco: formData.get("endereco").trim(),
@@ -576,6 +578,22 @@ function populateCityOptions(cities) {
 }
 
 function formatPlaceName(value) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+
+  const lowercaseWords = new Set(["de", "da", "do", "das", "dos", "e"]);
+
+  return text
+    .toLocaleLowerCase("pt-BR")
+    .split(" ")
+    .map((word, index) => {
+      if (index > 0 && lowercaseWords.has(word)) return word;
+      return word.charAt(0).toLocaleUpperCase("pt-BR") + word.slice(1);
+    })
+    .join(" ");
+}
+
+function formatPersonName(value) {
   const text = String(value || "").replace(/\s+/g, " ").trim();
   if (!text) return "";
 

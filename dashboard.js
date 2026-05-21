@@ -152,6 +152,7 @@ function renderProfileCharts(responses) {
   createChart("faixaChart", "faixa", "bar", countBy(responses, "faixaEtaria"));
   createChart("cidadeChart", "cidade", "bar", countBy(responses, "cidade"));
   createChart("regiaoChart", "regiao", "bar", countBy(responses, "regiao"));
+  createChart("pesquisadorChart", "pesquisador", "bar", countBy(responses, "pesquisador"));
   createChart("cotasChart", "cotas", "doughnut", countQuotaStatus(dashboardData.quotas));
 }
 
@@ -495,7 +496,7 @@ function countBy(rows, field) {
 function groupTextValues(rows, field) {
   return rows.reduce((acc, row) => {
     const rawValue = String(row[field] || "").replace(/\s+/g, " ").trim();
-    const key = normalizeGroupKey(rawValue || "Nao informado");
+    const key = field === "pesquisador" ? normalizePersonKey(rawValue || "Nao informado") : normalizeGroupKey(rawValue || "Nao informado");
     if (!acc[key]) acc[key] = { label: rawValue ? formatDisplayLabel(rawValue) : "Nao informado", count: 0 };
     acc[key].count += 1;
     return acc;
@@ -627,6 +628,13 @@ function numberValue(value) {
 
 function sameNormalizedValue(a, b) {
   return normalizeGroupKey(a) === normalizeGroupKey(b);
+}
+
+function normalizePersonKey(value) {
+  return normalizeText(value)
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim() || "nao informado";
 }
 
 function normalizeGroupKey(value) {
