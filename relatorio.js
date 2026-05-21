@@ -150,7 +150,7 @@ function renderCharts() {
   createChart("profile_cidade", "bar", countBy(state.responses, "cidade"));
   createChart("profile_regiao", "bar", countBy(state.responses, "regiao"));
 
-  questionsByType("fechada").forEach((question) => {
+  questionsByTypes(["fechada", "semifechada"]).forEach((question) => {
     createQuestionChart(`chart_closed_${question.code}`, countQuestion(question), question);
   });
   questionsByType("escala").forEach((question) => {
@@ -312,18 +312,22 @@ function createChart(canvasId, type, source, colors) {
   if (!canvas) return;
   const labels = Object.keys(source);
   const values = Object.values(source);
+  const total = values.reduce((sum, value) => sum + Number(value || 0), 0);
+  const chartLabels = labels.length && total > 0 ? labels : ["Sem respostas"];
+  const chartValues = values.length && total > 0 ? values : [1];
+  const chartColors = values.length && total > 0 ? (colors || PALETTE) : ["#e5e7eb"];
   reportCharts[canvasId] = new Chart(canvas, {
     type,
     data: {
-      labels: labels.length ? labels : ["Sem dados"],
-      datasets: [{ data: values.length ? values : [0], backgroundColor: colors || PALETTE, borderColor: "#fff", borderWidth: 2, borderRadius: type === "bar" ? 6 : 0 }]
+      labels: chartLabels,
+      datasets: [{ data: chartValues, backgroundColor: chartColors, borderColor: "#fff", borderWidth: 2, borderRadius: type === "bar" ? 6 : 0 }]
     },
     options: {
       responsive: false,
       maintainAspectRatio: true,
       animation: false,
       devicePixelRatio: 4,
-      plugins: { legend: { display: type !== "bar", position: "bottom", labels: { boxWidth: 9, font: { size: 9 } } } },
+      plugins: { legend: { display: type !== "bar" && total > 0, position: "bottom", labels: { boxWidth: 9, font: { size: 9 } } } },
       scales: type === "bar" ? { x: { grid: { display: false }, ticks: { font: { size: 9 } } }, y: { beginAtZero: true, ticks: { precision: 0, font: { size: 9 } } } } : {}
     }
   });
