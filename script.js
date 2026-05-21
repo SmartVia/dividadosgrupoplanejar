@@ -3,6 +3,7 @@
 const API_URL = "https://script.google.com/macros/s/AKfycby1iZyydOBfSrNpKPx0HulX3gT-KhfUEaOxxcfCq6JaUyB2UF43dAVtKd9hNxSGOoD7/exec";
 
 const OFFLINE_QUEUE_KEY = "dividados_offline_queue_v1";
+const QUESTIONS_CACHE_KEY = "dividados_questions_cache_v2";
 const MAX_CLOSED_QUESTIONS = 100;
 const MAX_OPEN_QUESTIONS = 20;
 const OPTION_KEYS = ["A", "B", "C", "D", "E", "F"];
@@ -119,14 +120,14 @@ async function loadQuestions() {
   const cachedQuestions = getCachedQuestions();
 
   if (cachedQuestions.length) {
-    questionDefinitions = cachedQuestions;
-    renderQuestions(questionDefinitions);
+    questionDefinitions = normalizeQuestions(cachedQuestions);
+    safeRenderQuestions(questionDefinitions);
   }
 
   if (!navigator.onLine || !API_URL) {
     if (!questionDefinitions.length) {
       questionDefinitions = getFallbackQuestions();
-      renderQuestions(questionDefinitions);
+      safeRenderQuestions(questionDefinitions);
     }
     return;
   }
@@ -136,17 +137,30 @@ async function loadQuestions() {
     if (response.ok && response.questions && response.questions.length) {
       questionDefinitions = normalizeQuestions(response.questions);
       cacheQuestions(questionDefinitions);
-      renderQuestions(questionDefinitions);
+      safeRenderQuestions(questionDefinitions);
     } else if (!questionDefinitions.length) {
       questionDefinitions = getFallbackQuestions();
-      renderQuestions(questionDefinitions);
+      safeRenderQuestions(questionDefinitions);
     }
   } catch (error) {
     console.warn("Nao foi possivel carregar perguntas da planilha. Usando cache/fallback.", error);
     if (!questionDefinitions.length) {
       questionDefinitions = getFallbackQuestions();
-      renderQuestions(questionDefinitions);
+      safeRenderQuestions(questionDefinitions);
     }
+  }
+}
+
+function safeRenderQuestions(questions) {
+  try {
+    renderQuestions(normalizeQuestions(questions));
+  } catch (error) {
+    console.error("Erro ao renderizar perguntas:", error);
+    localStorage.removeItem(QUESTIONS_CACHE_KEY);
+    localStorage.removeItem("dividados_questions_cache_v1");
+    questionDefinitions = getFallbackQuestions();
+    renderQuestions(normalizeQuestions(questionDefinitions));
+    showMessage("Nao foi possivel carregar as perguntas salvas neste aparelho. Atualizei o cache e carreguei um modelo temporario.", "info");
   }
 }
 
@@ -189,8 +203,9 @@ function normalizeQuestionId(id, type, index) {
 }
 
 function renderQuestions(questions) {
-  const activeQuestions = questions
-    .filter((question) => normalizeQuestionType(question.tipo) !== "abertatexto" || getOpenQuestionCount(questions, question) <= MAX_OPEN_QUESTIONS)
+  const normalizedQuestions = normalizeQuestions(questions);
+  const activeQuestions = normalizedQuestions
+    .filter((question) => normalizeQuestionType(question.tipo) !== "abertatexto" || getOpenQuestionCount(normalizedQuestions, question) <= MAX_OPEN_QUESTIONS)
     .slice(0, MAX_CLOSED_QUESTIONS + MAX_OPEN_QUESTIONS);
   let lastContext = "";
 
@@ -254,13 +269,15 @@ function getFallbackQuestions() {
 }
 
 function cacheQuestions(questions) {
-  localStorage.setItem("dividados_questions_cache_v1", JSON.stringify(questions));
+  localStorage.setItem(QUESTIONS_CACHE_KEY, JSON.stringify(normalizeQuestions(questions)));
+  localStorage.removeItem("dividados_questions_cache_v1");
 }
 
 function getCachedQuestions() {
   try {
-    return JSON.parse(localStorage.getItem("dividados_questions_cache_v1")) || [];
+    return JSON.parse(localStorage.getItem(QUESTIONS_CACHE_KEY)) || [];
   } catch (error) {
+    localStorage.removeItem(QUESTIONS_CACHE_KEY);
     return [];
   }
 }
@@ -548,9 +565,16 @@ function normalizeQuestionType(type) {
 
 function getQuestionAlternatives(question, type) {
   const alternatives = {};
+
+  if (question.alternatives && typeof question.alternatives === "object") {
+    OPTION_KEYS.forEach((key) => {
+      if (question.alternatives[key]) alternatives[key] = String(question.alternatives[key]).trim();
+    });
+  }
+
   OPTION_KEYS.forEach((key) => {
     const value = question[key.toLowerCase()] || question[key] || "";
-    if (value) alternatives[key] = String(value).trim();
+    if (value && !alternatives[key]) alternatives[key] = String(value).trim();
   });
 
   if (type === "escala" && !Object.keys(alternatives).length) {
