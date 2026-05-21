@@ -54,6 +54,12 @@ let syncInProgress = false;
 let questionDefinitions = [];
 let pesquisadorSuggestions = [];
 let cidadeSuggestions = [];
+let interviewStartAt = new Date().toISOString();
+let gpsState = {
+  latitude: "",
+  longitude: "",
+  status: "Indisponível"
+};
 
 checkQuotaButton.addEventListener("click", checkQuota);
 form.addEventListener("submit", submitSurvey);
@@ -74,6 +80,7 @@ function initializeOfflineMode() {
   setupLocationFields();
   setupSuggestionFields();
   loadCityOptions();
+  requestGpsLocation();
 
   if (navigator.onLine) {
     syncPendingResponses();
@@ -246,6 +253,13 @@ function clearMessage() {
 function closeQuestions() {
   quotaIsOpen = false;
   questionsSection.classList.add("hidden");
+}
+
+function startInterviewAudit() {
+  interviewStartAt = new Date().toISOString();
+  if (!gpsState.latitude && gpsState.status !== "Negado pelo usuário") {
+    requestGpsLocation();
+  }
 }
 
 async function loadQuestions() {
@@ -459,6 +473,7 @@ async function checkQuota() {
 
   if (!navigator.onLine) {
     quotaIsOpen = true;
+    startInterviewAudit();
     questionsSection.classList.remove("hidden");
     showMessage("Sem internet. A verificação de cota não está disponível agora, mas você pode continuar a pesquisa. A resposta será sincronizada depois.", "info");
     return;
@@ -481,6 +496,7 @@ async function checkQuota() {
 
     if (response.ok && response.open) {
       quotaIsOpen = true;
+      startInterviewAudit();
       questionsSection.classList.remove("hidden");
       showMessage(`Cota aberta. Restam ${response.restante} entrevista(s) para este perfil.`, "success");
       return;
@@ -549,16 +565,22 @@ function buildSurveyPayload(origin) {
   const uniqueId = createUniqueId();
   const questionAnswers = collectQuestionAnswers(formData);
   const firstOpenAnswer = questionAnswers.find((answer) => normalizeQuestionType(answer.tipo) === "abertatexto" && answer.resposta);
+  const now = new Date().toISOString();
 
   return {
     uniqueId,
-    dataHora: new Date().toISOString(),
+    dataHora: now,
+    dataHoraInicio: interviewStartAt || now,
+    dataHoraEnvio: origin === "Online" ? now : "",
     pesquisador: formatPersonName(formData.get("pesquisador")),
     cidade: formatPlaceName(formData.get("cidade")),
     regiao: formatPlaceName(formData.get("regiao")),
     endereco: formData.get("endereco").trim(),
     sexo: formData.get("sexo"),
     faixaEtaria: formData.get("faixaEtaria"),
+    latitude: gpsState.latitude || "",
+    longitude: gpsState.longitude || "",
+    statusGPS: gpsState.status || "Indisponível",
     respostas: questionAnswers,
     respostaAberta: firstOpenAnswer ? firstOpenAnswer.resposta : "",
     origem: origin,
@@ -570,12 +592,17 @@ function compactSubmitPayload(payload) {
   return {
     uniqueId: payload.uniqueId,
     dataHora: payload.dataHora,
+    dataHoraInicio: payload.dataHoraInicio,
+    dataHoraEnvio: payload.dataHoraEnvio || new Date().toISOString(),
     pesquisador: payload.pesquisador,
     cidade: payload.cidade,
     regiao: payload.regiao,
     endereco: payload.endereco,
     sexo: payload.sexo,
     faixaEtaria: payload.faixaEtaria,
+    latitude: payload.latitude || "",
+    longitude: payload.longitude || "",
+    statusGPS: payload.statusGPS || "Indisponível",
     respostas: (payload.respostas || []).map((answer) => ({
       campo: answer.campo,
       id: answer.id,
@@ -924,8 +951,38 @@ function finishOfflineSave() {
 
 function resetFormAfterSave() {
   form.reset();
+  interviewStartAt = new Date().toISOString();
   closeQuestions();
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function requestGpsLocation() {
+  if (!("geolocation" in navigator)) {
+    gpsState = { latitude: "", longitude: "", status: "Indisponível" };
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      gpsState = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        status: "Capturado"
+      };
+    },
+    (error) => {
+      gpsState = {
+        latitude: "",
+        longitude: "",
+        status: error && error.code === error.PERMISSION_DENIED ? "Negado pelo usuário" : "Indisponível"
+      };
+    },
+    {
+      enableHighAccuracy: false,
+      timeout: 8000,
+      maximumAge: 300000
+    }
+  );
 }
 
 function createUniqueId() {
@@ -978,6 +1035,7 @@ async function syncPendingResponses() {
     try {
       const payload = {
         ...item.payload,
+        dataHoraEnvio: new Date().toISOString(),
         origem: "Offline",
         statusSincronizacao: "Sincronizada"
       };

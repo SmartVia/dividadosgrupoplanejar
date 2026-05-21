@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatório de Campo - Dividados Pesquisa</title>
+  <link rel="stylesheet" href="style.css?v=3">
+</head>
+<body class="dashboard-page">
+  <main class="dashboard-shell field-report-shell">
+    <header class="dashboard-hero no-print">
+      <div>
+        <p class="eyebrow">Auditoria de campo</p>
+        <h1>Relatório de Campo</h1>
+        <p class="dashboard-subtitle">Registro operacional das entrevistas por pesquisador, horário, perfil, origem, sincronização e GPS.</p>
+      </div>
+      <div class="header-actions">
+        <a class="small-link" href="dashboard.html">Dashboard</a>
+        <button id="exportCsvButton" class="secondary-button" type="button">Exportar CSV</button>
+        <button id="printFieldButton" class="secondary-button" type="button">Imprimir / Salvar PDF</button>
+        <button id="refreshFieldButton" class="primary-button" type="button">Atualizar dados</button>
+      </div>
+    </header>
+
+    <div id="fieldMessage" class="message no-print" hidden></div>
+
+    <section class="print-only field-print-title">
+      <p class="eyebrow">Dividados Pesquisa</p>
+      <h1>Relatório de Campo / Auditoria das Entrevistas</h1>
+    </section>
+
+    <section class="filter-panel no-print">
+      <div class="section-title-row">
+        <div>
+          <p class="eyebrow">Filtros</p>
+          <h2>Auditoria das entrevistas</h2>
+        </div>
+        <button id="clearFieldFiltersButton" class="secondary-button" type="button">Limpar filtros</button>
+      </div>
+      <div class="filter-grid field-filter-grid">
+        <label>Pesquisador<select id="fieldPesquisador"></select></label>
+        <label>Cidade<select id="fieldCidade"></select></label>
+        <label>Região/Bairro<select id="fieldRegiao"></select></label>
+        <label>Data inicial<input type="date" id="fieldDataInicial"></label>
+        <label>Data final<input type="date" id="fieldDataFinal"></label>
+        <label>Status GPS<select id="fieldStatusGps"></select></label>
+        <label>Status Sincronização<select id="fieldStatusSync"></select></label>
+      </div>
+    </section>
+
+    <section class="metric-grid field-metrics">
+      <article class="metric-card"><span>Total de entrevistas</span><strong id="fieldTotal">0</strong></article>
+      <article class="metric-card"><span>Entrevistas hoje</span><strong id="fieldToday">0</strong></article>
+      <article class="metric-card"><span>Pesquisadores</span><strong id="fieldResearchers">0</strong></article>
+      <article class="metric-card"><span>GPS capturado</span><strong id="fieldGpsCaptured">0</strong></article>
+      <article class="metric-card"><span>GPS não capturado</span><strong id="fieldGpsMissing">0</strong></article>
+    </section>
+
+    <section class="dashboard-section field-researcher-section">
+      <div class="section-title-row">
+        <div>
+          <p class="eyebrow">Equipe</p>
+          <h2>Entrevistas por pesquisador</h2>
+        </div>
+        <span id="fieldLastUpdated" class="muted-text"></span>
+      </div>
+      <div id="fieldResearcherSummary" class="researcher-summary-grid compact-summary"></div>
+    </section>
+
+    <section class="table-section field-table-section">
+      <div class="section-title-row">
+        <div>
+          <p class="eyebrow">Registro das entrevistas</p>
+          <h2>Auditoria detalhada</h2>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="field-table">
+          <thead>
+            <tr>
+              <th>Data/Hora Início</th>
+              <th>Data/Hora Envio</th>
+              <th>Pesquisador</th>
+              <th>Cidade</th>
+              <th>Região/Bairro</th>
+              <th>Endereço</th>
+              <th>Sexo</th>
+              <th>Faixa Etária</th>
+              <th>Latitude</th>
+              <th>Longitude</th>
+              <th>Status GPS</th>
+              <th>Origem</th>
+              <th>Status Sincronização</th>
+            </tr>
+          </thead>
+          <tbody id="fieldTableBody">
+            <tr><td colspan="13">Carregando dados...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="campo.js?v=1"></script>
+</body>
+</html>

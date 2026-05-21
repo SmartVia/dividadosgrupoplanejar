@@ -209,6 +209,38 @@ textarea:focus {
   cursor: default;
 }
 
+.field-report-shell {
+  max-width: 1280px;
+}
+
+.field-filter-grid {
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+}
+
+.field-metrics {
+  grid-template-columns: repeat(5, minmax(140px, 1fr));
+}
+
+.compact-summary {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.field-table-section .table-wrap {
+  max-height: 70vh;
+}
+
+.field-table {
+  min-width: 1180px;
+  font-size: 0.88rem;
+}
+
+.field-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f8fafc;
+}
+
 .grid-two {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -284,6 +316,16 @@ button:disabled {
 .message.info {
   background: var(--warning-bg);
   color: var(--warning-text);
+}
+
+.privacy-note {
+  margin: -4px 0 16px;
+  border-left: 3px solid #99f6e4;
+  padding: 8px 10px;
+  color: var(--muted);
+  background: #f0fdfa;
+  font-size: 0.88rem;
+  font-weight: 700;
 }
 
 .message.success {
@@ -1032,11 +1074,13 @@ td {
 
 @media (max-width: 1120px) {
   .executive-metrics,
+  .field-metrics,
   .question-chart-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .filter-grid,
+  .field-filter-grid,
   .insight-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1054,6 +1098,8 @@ td {
   }
 
   .filter-grid,
+  .field-filter-grid,
+  .field-metrics,
   .executive-metrics,
   .executive-charts,
   .question-chart-grid,
@@ -1113,6 +1159,42 @@ td {
 
   .dashboard-shell {
     display: none !important;
+  }
+
+  .field-report-shell {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .field-print-title {
+    margin-bottom: 8mm;
+  }
+
+  .field-metrics,
+  .compact-summary {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 4mm !important;
+  }
+
+  .field-researcher-section,
+  .field-table-section,
+  .field-table-section .table-wrap {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  .field-table {
+    min-width: 0 !important;
+    width: 100% !important;
+    font-size: 7pt !important;
+  }
+
+  .field-table th,
+  .field-table td {
+    padding: 4px !important;
+    word-break: break-word;
   }
 
   .print-report {
