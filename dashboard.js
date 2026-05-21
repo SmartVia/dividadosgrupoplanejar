@@ -28,7 +28,7 @@ const filters = {
   faixaEtaria: document.getElementById("filterFaixaEtaria")
 };
 
-let dashboardData = { responses: [], quotas: [], questions: [] };
+let dashboardData = { responses: [], quotas: [], questions: [], researchers: [] };
 
 refreshButton.addEventListener("click", loadDashboard);
 printButton.addEventListener("click", () => window.print());
@@ -55,6 +55,7 @@ async function loadDashboard() {
     dashboardData = {
       responses: normalizeResponses(dashboardResponse.responses || []),
       quotas: dashboardResponse.quotas || [],
+      researchers: normalizeResearchers(dashboardResponse.researchers || []),
       questions: normalizeQuestions(questionsResponse.ok ? questionsResponse.questions : [])
     };
 
@@ -84,6 +85,18 @@ function normalizeResponses(rows) {
     faixaEtaria: row.FaixaEtaria || row.faixaEtaria || "",
     respostas: parseResponseJson(row.RespostasJson || row.respostasJson || "")
   }));
+}
+
+function normalizeResearchers(rows) {
+  return (rows || []).map((row) => ({
+    id: row.id || row.ID || "",
+    nome: row.nome || row.Nome || "",
+    cidade: row.cidade || row.Cidade || "",
+    meta: Number(row.meta || row.Meta) || 0,
+    realizado: Number(row.realizado || row.Realizado) || 0,
+    restante: Number(row.restante || row.Restante) || 0,
+    status: row.status || row.Status || "Ativo"
+  })).filter((row) => row.nome);
 }
 
 function normalizeQuestions(questions) {
@@ -129,6 +142,7 @@ function renderDashboard() {
 
   renderMetrics(responses, closedQuestions, scaleQuestions, scaleStats);
   renderProfileCharts(responses);
+  renderResearcherSummary(responses);
   renderScaleRanking(scaleStats);
   renderClosedQuestions(responses, closedQuestions);
   renderScaleQuestions(scaleStats);
@@ -154,6 +168,82 @@ function renderProfileCharts(responses) {
   createChart("regiaoChart", "regiao", "bar", countBy(responses, "regiao"));
   createChart("pesquisadorChart", "pesquisador", "bar", countBy(responses, "pesquisador"));
   createChart("cotasChart", "cotas", "doughnut", countQuotaStatus(dashboardData.quotas));
+}
+
+function renderResearcherSummary(responses) {
+  const container = document.getElementById("researcherSummary");
+  if (!container) return;
+
+  const summary = buildResearcherSummary(responses);
+
+  if (!summary.length) {
+    container.innerHTML = '<article class="insight-card"><h3>Nenhum pesquisador encontrado.</h3><p class="muted-text">Cadastre pesquisadores na aba Pesquisadores ou envie entrevistas com nome preenchido.</p></article>';
+    return;
+  }
+
+  container.innerHTML = summary.map((item) => {
+    const percent = item.meta ? Math.min(Math.round((item.realizado / item.meta) * 100), 100) : 0;
+    const statusClass = normalizeText(item.status) === "inativo" ? "status-closed" : "status-open";
+    const statusText = item.status || "Ativo";
+
+    return `
+      <article class="researcher-card">
+        <div>
+          <h3>${escapeHtml(item.nome)}</h3>
+          <p>${escapeHtml(item.cidade || "Cidade não informada")}</p>
+        </div>
+        <strong>${item.realizado} entrevistas</strong>
+        <div class="researcher-progress">
+          <span style="width:${percent}%"></span>
+        </div>
+        <small>Meta: ${item.meta || "Não definida"} · Restante: ${item.restante || 0} · <em class="${statusClass}">${escapeHtml(statusText)}</em></small>
+      </article>
+    `;
+  }).join("");
+}
+
+function buildResearcherSummary(responses) {
+  const grouped = {};
+
+  responses.forEach((row) => {
+    const name = row.pesquisador || "";
+    if (!name) return;
+    const key = normalizePersonKey(name);
+    if (!grouped[key]) {
+      grouped[key] = {
+        nome: formatDisplayLabel(name),
+        cidade: "",
+        meta: 0,
+        realizado: 0,
+        restante: 0,
+        status: "Ativo"
+      };
+    }
+    grouped[key].realizado += 1;
+  });
+
+  dashboardData.researchers.forEach((researcher) => {
+    const key = normalizePersonKey(researcher.nome);
+    if (!grouped[key]) {
+      grouped[key] = {
+        nome: formatDisplayLabel(researcher.nome),
+        cidade: researcher.cidade || "",
+        meta: researcher.meta || 0,
+        realizado: researcher.realizado || 0,
+        restante: researcher.restante || 0,
+        status: researcher.status || "Ativo"
+      };
+      return;
+    }
+
+    grouped[key].nome = formatDisplayLabel(researcher.nome);
+    grouped[key].cidade = researcher.cidade || grouped[key].cidade;
+    grouped[key].meta = researcher.meta || grouped[key].meta;
+    grouped[key].restante = grouped[key].meta ? Math.max(grouped[key].meta - grouped[key].realizado, 0) : (researcher.restante || 0);
+    grouped[key].status = researcher.status || grouped[key].status;
+  });
+
+  return Object.values(grouped).sort((a, b) => b.realizado - a.realizado);
 }
 
 function renderClosedQuestions(responses, questions) {

@@ -1546,6 +1546,64 @@ td {
   color: var(--primary-dark);
 }
 
+.researcher-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.researcher-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.045);
+}
+
+.researcher-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.researcher-card p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.researcher-card > strong {
+  color: #0f172a;
+  font-size: 1.6rem;
+}
+
+.researcher-progress {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e5e7eb;
+}
+
+.researcher-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+}
+
+.researcher-card small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.researcher-card em {
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-style: normal;
+}
+
 .report-link {
   display: inline-flex;
   align-items: center;
@@ -1829,6 +1887,7 @@ td {
   .scale-options,
   .ranking-layout,
   .scale-kpi-grid,
+  .researcher-summary-grid,
   .report-kpi-grid,
   .report-chart-grid,
   .report-question-grid,

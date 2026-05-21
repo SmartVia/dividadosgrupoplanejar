@@ -5,6 +5,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycby1iZyydOBfSrNpKPx0HulX
 const OFFLINE_QUEUE_KEY = "dividados_offline_queue_v1";
 const QUESTIONS_CACHE_KEY = "dividados_questions_cache_v3";
 const QUOTAS_CACHE_KEY = "dividados_quotas_cache_v1";
+const RESEARCHERS_CACHE_KEY = "dividados_researchers_cache_v1";
 const MAX_CLOSED_QUESTIONS = 100;
 const MAX_OPEN_QUESTIONS = 20;
 const OPTION_KEYS = ["A", "B", "C", "D", "E", "F"];
@@ -39,6 +40,8 @@ const syncNowButton = document.getElementById("syncNowButton");
 const cidadeInput = document.getElementById("cidade");
 const regiaoInput = document.getElementById("regiao");
 const cidadeOptions = document.getElementById("cidadeOptions");
+const pesquisadorInput = document.getElementById("pesquisador");
+const pesquisadorOptions = document.getElementById("pesquisadorOptions");
 const sexoSelect = document.getElementById("sexo");
 const faixaEtariaSelect = document.getElementById("faixaEtaria");
 
@@ -60,12 +63,58 @@ function initializeOfflineMode() {
   updateConnectionBox();
   updatePendingCount();
   loadQuotaOptions();
+  loadResearcherOptions();
   loadQuestions();
   setupLocationFields();
   loadCityOptions();
 
   if (navigator.onLine) {
     syncPendingResponses();
+  }
+}
+
+async function loadResearcherOptions() {
+  const cachedResearchers = getCachedResearchers();
+  if (cachedResearchers.length) {
+    populateResearcherOptions(cachedResearchers);
+  }
+
+  if (!navigator.onLine || !API_URL) return;
+
+  try {
+    const response = await apiRequest("getResearchers", {});
+    if (response.ok && response.researchers) {
+      cacheResearchers(response.researchers);
+      populateResearcherOptions(response.researchers);
+    }
+  } catch (error) {
+    console.warn("Nao foi possivel carregar pesquisadores da planilha. Usando cache/campo livre.", error);
+  }
+}
+
+function populateResearcherOptions(researchers) {
+  if (!pesquisadorOptions) return;
+
+  const activeResearchers = (researchers || [])
+    .filter((researcher) => normalizeText(researcher.status || "Ativo") !== "inativo")
+    .map((researcher) => researcher.nome || researcher.Nome || "")
+    .filter(Boolean);
+
+  pesquisadorOptions.innerHTML = uniqueOrderedValues(activeResearchers)
+    .map((name) => `<option value="${escapeHtml(name)}"></option>`)
+    .join("");
+}
+
+function cacheResearchers(researchers) {
+  localStorage.setItem(RESEARCHERS_CACHE_KEY, JSON.stringify(researchers || []));
+}
+
+function getCachedResearchers() {
+  try {
+    return JSON.parse(localStorage.getItem(RESEARCHERS_CACHE_KEY)) || [];
+  } catch (error) {
+    localStorage.removeItem(RESEARCHERS_CACHE_KEY);
+    return [];
   }
 }
 
@@ -368,7 +417,6 @@ function getCachedQuestions() {
 function getProfileData() {
   cidadeInput.value = formatPlaceName(cidadeInput.value);
   regiaoInput.value = formatPlaceName(regiaoInput.value);
-  const pesquisadorInput = document.getElementById("pesquisador");
   pesquisadorInput.value = formatPersonName(pesquisadorInput.value);
 
   return {
