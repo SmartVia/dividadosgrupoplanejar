@@ -1,6 +1,3 @@
-// Cole somente a URL publicada do seu Google Apps Script entre as aspas.
-const API_URL = "https://script.google.com/macros/s/AKfycby1iZyydOBfSrNpKPx0HulX3gT-KhfUEaOxxcfCq6JaUyB2UF43dAVtKd9hNxSGOoD7/exec";
-
 const OPTION_KEYS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
 const SCALE_WEIGHTS = { A: 1, B: 2, C: 3, D: 4, E: 5, F: 6 };
 const COLORS = {
@@ -22,6 +19,15 @@ const refreshButton = document.getElementById("refreshButton");
 const printButton = document.getElementById("printButton");
 const clearFiltersButton = document.getElementById("clearFiltersButton");
 const lastUpdated = document.getElementById("lastUpdated");
+const crossQuestionSelect = document.getElementById("crossQuestionSelect");
+const crossFieldSelect = document.getElementById("crossFieldSelect");
+const crossViewSelect = document.getElementById("crossViewSelect");
+const generateCrossButton = document.getElementById("generateCrossButton");
+const exportCrossButton = document.getElementById("exportCrossButton");
+const printCrossButton = document.getElementById("printCrossButton");
+const crossMessage = document.getElementById("crossMessage");
+const crossChartWrap = document.getElementById("crossChartWrap");
+const crossTableWrap = document.getElementById("crossTableWrap");
 const charts = {};
 
 const filters = {
@@ -37,6 +43,9 @@ let dashboardData = { responses: [], quotas: [], questions: [], researchers: [] 
 refreshButton.addEventListener("click", loadDashboard);
 printButton.addEventListener("click", () => window.print());
 clearFiltersButton.addEventListener("click", clearFilters);
+if (generateCrossButton) generateCrossButton.addEventListener("click", renderCrossAnalysis);
+if (exportCrossButton) exportCrossButton.addEventListener("click", exportCrossCsv);
+if (printCrossButton) printCrossButton.addEventListener("click", () => window.print());
 Object.values(filters).forEach((filter) => filter.addEventListener("change", renderDashboard));
 document.addEventListener("DOMContentLoaded", () => {
   loadDashboard();
@@ -50,8 +59,8 @@ async function loadDashboard() {
 
   try {
     const [dashboardResponse, questionsResponse] = await Promise.all([
-      apiRequest("dashboard", {}),
-      apiRequest("getQuestions", {})
+      getDashboardData(),
+      getQuestions()
     ]);
 
     if (!dashboardResponse.ok) throw new Error(dashboardResponse.message || "Nao foi possivel carregar o dashboard.");
@@ -87,6 +96,8 @@ function normalizeResponses(rows) {
     endereco: row.Endereco || row.endereco || "",
     sexo: row.Sexo || row.sexo || "",
     faixaEtaria: row.FaixaEtaria || row.faixaEtaria || "",
+    escolaridade: row.Escolaridade || row.escolaridade || "",
+    renda: row.Renda || row.renda || "",
     respostas: parseResponseJson(row.RespostasJson || row.respostasJson || "")
   }));
 }
@@ -150,6 +161,8 @@ function renderDashboard() {
   renderScaleRanking(scaleStats);
   renderClosedQuestions(responses, closedQuestions);
   renderScaleQuestions(scaleStats);
+  populateCrossControls(responses);
+  renderCrossAnalysis();
   renderOpenQuestions(responses, openQuestions, semiQuestions);
   renderQuotas();
 }
@@ -300,6 +313,212 @@ function renderScaleQuestions(scaleStats) {
     createQuestionChart(`chart_scale_${stats.question.code}`, `scale_${stats.question.code}`, stats.counts, stats.question);
     renderLegend(`legend_scale_${stats.question.code}`, stats.question, stats.counts);
   });
+}
+
+function populateCrossControls(responses) {
+  if (!crossQuestionSelect || !crossFieldSelect) return;
+
+  const currentQuestion = crossQuestionSelect.value;
+  const currentField = crossFieldSelect.value;
+  const questions = getEligibleCrossQuestions();
+  const fields = getAvailableProfileFields(responses);
+
+  crossQuestionSelect.innerHTML = questions.length
+    ? questions.map((question) => `<option value="${escapeHtml(question.code)}">${escapeHtml(question.code)} — ${escapeHtml(question.text)}</option>`).join("")
+    : '<option value="">Nenhuma pergunta disponível</option>';
+  crossFieldSelect.innerHTML = fields.length
+    ? fields.map((field) => `<option value="${escapeHtml(field.key)}">${escapeHtml(field.label)}</option>`).join("")
+    : '<option value="">Nenhuma variável disponível</option>';
+
+  if (questions.some((question) => question.code === currentQuestion)) crossQuestionSelect.value = currentQuestion;
+  if (fields.some((field) => field.key === currentField)) crossFieldSelect.value = currentField;
+}
+
+function renderCrossAnalysis() {
+  if (!crossQuestionSelect || !crossFieldSelect || !crossTableWrap || !crossChartWrap) return;
+
+  const responses = getFilteredResponses();
+  const question = getEligibleCrossQuestions().find((item) => item.code === crossQuestionSelect.value);
+  const field = getAvailableProfileFields(responses).find((item) => item.key === crossFieldSelect.value);
+  const view = crossViewSelect ? crossViewSelect.value : "both";
+
+  if (!question || !field) {
+    crossMessage.textContent = "Selecione uma pergunta e uma variável para gerar o cruzamento.";
+    crossTableWrap.innerHTML = "";
+    crossChartWrap.hidden = true;
+    destroyCharts("cross_");
+    return;
+  }
+
+  const crossTable = calculateCrossPercentages(buildCrossTable(responses, question, field.key));
+  crossTable.question = question;
+  crossTable.field = field;
+
+  if (!crossTable.total) {
+    crossMessage.textContent = "Sem dados suficientes para este cruzamento.";
+    crossTableWrap.innerHTML = "";
+    crossChartWrap.hidden = true;
+    destroyCharts("cross_");
+    return;
+  }
+
+  crossMessage.textContent = `${question.code} cruzada com ${field.label}. Total considerado: ${crossTable.total} entrevista(s).`;
+  crossTableWrap.hidden = view === "chart";
+  crossChartWrap.hidden = view === "table";
+
+  if (view !== "chart") renderCrossTable(crossTableWrap, crossTable);
+  if (view !== "table") renderCrossChart("crossChart", crossTable);
+}
+
+// Monta a matriz de frequência: alternativas nas linhas e categorias de perfil nas colunas.
+function buildCrossTable(responses, question, profileField) {
+  const rows = getOptionKeys(question).map((key) => ({ key, label: question.alternatives[key] || key, total: 0, cells: {} }));
+  const byKey = rows.reduce((acc, row) => {
+    acc[row.key] = row;
+    return acc;
+  }, {});
+  const columnsMap = {};
+  let total = 0;
+
+  responses.forEach((response) => {
+    const answer = String(getAnswerForQuestion(response, question) || "").trim().toUpperCase();
+    if (!byKey[answer]) return;
+
+    const profileValue = response[profileField] || response.raw?.[profileField] || "Não informado";
+    const column = formatDisplayLabel(profileValue);
+    const columnKey = normalizeGroupKey(column);
+    if (!columnsMap[columnKey]) columnsMap[columnKey] = { key: columnKey, label: column, total: 0 };
+
+    byKey[answer].cells[columnKey] = (byKey[answer].cells[columnKey] || 0) + 1;
+    byKey[answer].total += 1;
+    columnsMap[columnKey].total += 1;
+    total += 1;
+  });
+
+  return {
+    question,
+    profileField,
+    rows,
+    columns: Object.values(columnsMap).sort((a, b) => a.label.localeCompare(b.label, "pt-BR")),
+    total
+  };
+}
+
+function calculateCrossPercentages(crossTable) {
+  crossTable.rows.forEach((row) => {
+    row.percentTotal = percent(row.total, crossTable.total);
+    row.columns = {};
+    crossTable.columns.forEach((column) => {
+      const count = row.cells[column.key] || 0;
+      row.columns[column.key] = {
+        count,
+        percentColumn: percent(count, column.total),
+        percentTotal: percent(count, crossTable.total)
+      };
+    });
+  });
+  return crossTable;
+}
+
+function renderCrossTable(container, crossTable) {
+  container.innerHTML = `
+    <table class="cross-table">
+      <thead>
+        <tr>
+          <th>Alternativa</th>
+          ${crossTable.columns.map((column) => `<th>${escapeHtml(column.label)}<small>${column.total}</small></th>`).join("")}
+          <th>Total geral</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${crossTable.rows.map((row) => `
+          <tr>
+            <th>${escapeHtml(row.key)} — ${escapeHtml(row.label)}</th>
+            ${crossTable.columns.map((column) => {
+              const cell = row.columns[column.key] || { count: 0, percentColumn: 0 };
+              return `<td><strong>${cell.count}</strong><span>${cell.percentColumn}% col.</span></td>`;
+            }).join("")}
+            <td><strong>${row.total}</strong><span>${row.percentTotal}% geral</span></td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderCrossChart(canvasId, crossTable) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  if (charts.cross_table) charts.cross_table.destroy();
+  document.getElementById("crossChartTitle").textContent = `${crossTable.question.code} x ${crossTable.field.label}`;
+  charts.cross_table = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: crossTable.columns.map((column) => column.label),
+      datasets: crossTable.rows.filter((row) => row.total > 0).map((row) => ({
+        label: `${row.key} — ${row.label}`,
+        data: crossTable.columns.map((column) => row.cells[column.key] || 0),
+        backgroundColor: COLORS[row.key] || "#64748b",
+        borderRadius: 6
+      }))
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom", labels: { boxWidth: 12 } } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, ticks: { precision: 0 } }
+      }
+    }
+  });
+}
+
+function getEligibleCrossQuestions() {
+  return dashboardData.questions.filter((question) => ["fechada", "semifechada", "escala"].includes(question.type));
+}
+
+function getAvailableProfileFields(responses = dashboardData.responses) {
+  const candidates = [
+    { key: "sexo", label: "Sexo" },
+    { key: "faixaEtaria", label: "Faixa etária" },
+    { key: "cidade", label: "Cidade" },
+    { key: "regiao", label: "Região/Bairro" },
+    { key: "pesquisador", label: "Pesquisador" },
+    { key: "escolaridade", label: "Escolaridade" },
+    { key: "renda", label: "Renda" }
+  ];
+  return candidates.filter((field) => {
+    if (["sexo", "faixaEtaria", "cidade", "regiao", "pesquisador"].includes(field.key)) return true;
+    return responses.some((row) => row[field.key] || row.raw?.[field.key] || row.raw?.[field.label]);
+  });
+}
+
+function exportCrossCsv() {
+  if (!crossQuestionSelect || !crossFieldSelect) return;
+  const responses = getFilteredResponses();
+  const question = getEligibleCrossQuestions().find((item) => item.code === crossQuestionSelect.value);
+  const field = getAvailableProfileFields(responses).find((item) => item.key === crossFieldSelect.value);
+  if (!question || !field) return;
+
+  const crossTable = calculateCrossPercentages(buildCrossTable(responses, question, field.key));
+  const header = ["Alternativa", ...crossTable.columns.map((column) => `${column.label} (${column.total})`), "Total geral"];
+  const rows = crossTable.rows.map((row) => [
+    `${row.key} — ${row.label}`,
+    ...crossTable.columns.map((column) => {
+      const cell = row.columns[column.key] || { count: 0, percentColumn: 0 };
+      return `${cell.count} (${cell.percentColumn}% col.)`;
+    }),
+    `${row.total} (${row.percentTotal}% geral)`
+  ]);
+  const csv = [header, ...rows].map((line) => line.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(";")).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `cruzamento-${question.code}-${field.key}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function renderScaleRanking(scaleStats) {
@@ -773,54 +992,4 @@ function parseResponseJson(value) {
   } catch (error) {
     return [];
   }
-}
-
-async function apiRequest(action, payload) {
-  try {
-    return await fetchRequest(action, payload);
-  } catch (error) {
-    console.warn("Fetch falhou. Tentando JSONP.", error);
-    return jsonpRequest(action, payload);
-  }
-}
-
-function buildApiUrl(action, payload, callbackName) {
-  const url = new URL(API_URL);
-  url.searchParams.set("action", action);
-  url.searchParams.set("payload", JSON.stringify(payload || {}));
-  if (callbackName) url.searchParams.set("callback", callbackName);
-  return url;
-}
-
-async function fetchRequest(action, payload) {
-  const response = await fetch(buildApiUrl(action, payload).toString(), { method: "GET", cache: "no-store", redirect: "follow" });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`API retornou HTTP ${response.status}: ${text.slice(0, 120)}`);
-  return JSON.parse(text);
-}
-
-function jsonpRequest(action, payload) {
-  return new Promise((resolve, reject) => {
-    const callbackName = `dividadosDashboard_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-    const script = document.createElement("script");
-    const timeoutId = setTimeout(() => {
-      reject(new Error("Tempo esgotado ao chamar a API."));
-      cleanup();
-    }, 20000);
-    window[callbackName] = (data) => {
-      resolve(data);
-      cleanup();
-    };
-    script.onerror = () => {
-      reject(new Error("Falha na chamada da API."));
-      cleanup();
-    };
-    function cleanup() {
-      clearTimeout(timeoutId);
-      delete window[callbackName];
-      script.remove();
-    }
-    script.src = buildApiUrl(action, payload, callbackName).toString();
-    document.body.appendChild(script);
-  });
 }

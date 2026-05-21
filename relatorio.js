@@ -1,5 +1,3 @@
-const API_URL = "https://script.google.com/macros/s/AKfycby1iZyydOBfSrNpKPx0HulX3gT-KhfUEaOxxcfCq6JaUyB2UF43dAVtKd9hNxSGOoD7/exec";
-
 const OPTION_KEYS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
 const SCALE_WEIGHTS = { A: 1, B: 2, C: 3, D: 4, E: 5, F: 6 };
 const COLORS = { A: "#16a34a", B: "#2563eb", C: "#f97316", D: "#7c3aed", E: "#dc2626", F: "#64748b", G: "#0891b2", H: "#475569", I: "#db2777", J: "#65a30d" };
@@ -19,8 +17,8 @@ document.addEventListener("DOMContentLoaded", loadReport);
 async function loadReport() {
   try {
     const [dashboardResponse, questionsResponse] = await Promise.all([
-      apiRequest("dashboard", {}),
-      apiRequest("getQuestions", {})
+      getDashboardData(),
+      getQuestions()
     ]);
     if (!dashboardResponse.ok) throw new Error(dashboardResponse.message || "Nao foi possivel carregar dados.");
     state = {
@@ -43,6 +41,7 @@ function renderReport() {
   const scales = questionsByType("escala").map((question) => calculateScaleStats(question));
   const opens = questionsByType("abertatexto").slice(0, 20);
   const semiQuestions = questionsByType("semifechada");
+  const crossTables = getAutomaticCrossTables();
   const total = state.responses.length;
   const male = countBy(state.responses, "sexo").Masculino || 0;
   const female = countBy(state.responses, "sexo").Feminino || 0;
@@ -114,6 +113,15 @@ function renderReport() {
         ${sectionTitle(`Perguntas Escala e Rankings${scales.length > 4 ? ` (${page + 1})` : ""}`)}
         <div class="report-question-grid">
           ${chunk.map((stats) => scaleBlock(stats)).join("")}
+        </div>
+      </section>
+    `).join("")}
+
+    ${chunkArray(crossTables, 2).map((chunk, page) => `
+      <section class="print-page">
+        ${sectionTitle(`Resultados Cruzados${crossTables.length > 2 ? ` (${page + 1})` : ""}`)}
+        <div class="report-cross-grid">
+          ${chunk.map((crossTable) => reportCrossBlock(crossTable)).join("")}
         </div>
       </section>
     `).join("")}
@@ -242,6 +250,42 @@ function semiOtherPage(question) {
   `;
 }
 
+function reportCrossBlock(crossTable) {
+  return `
+    <article class="report-cross-card avoid-break">
+      <h3>${escapeHtml(crossTable.question.code)} x ${escapeHtml(crossTable.field.label)}</h3>
+      <p>${escapeHtml(crossTable.question.text)}</p>
+      ${renderReportCrossTable(crossTable)}
+    </article>
+  `;
+}
+
+function renderReportCrossTable(crossTable) {
+  return `
+    <table class="report-cross-table">
+      <thead>
+        <tr>
+          <th>Alternativa</th>
+          ${crossTable.columns.map((column) => `<th>${escapeHtml(column.label)}<small>${column.total}</small></th>`).join("")}
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${crossTable.rows.map((row) => `
+          <tr>
+            <th>${escapeHtml(row.key)} — ${escapeHtml(row.label)}</th>
+            ${crossTable.columns.map((column) => {
+              const cell = row.columns[column.key] || { count: 0, percentColumn: 0 };
+              return `<td><strong>${cell.count}</strong><span>${cell.percentColumn}%</span></td>`;
+            }).join("")}
+            <td><strong>${row.total}</strong><span>${row.percentTotal}%</span></td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
 function legend(question, counts) {
   const keys = optionKeys(question);
   const total = keys.reduce((sum, key) => sum + (counts[key] || 0), 0);
@@ -322,7 +366,7 @@ function buildAutomaticReportConfig(rows) {
 }
 
 function normalizeResponses(rows) {
-  return rows.map((row) => ({ raw: row, dataHora: row.DataHora || "", pesquisador: row.Pesquisador || "", cidade: row.Cidade || "", regiao: row.Regiao || "", sexo: row.Sexo || "", faixaEtaria: row.FaixaEtaria || "", respostas: parseJson(row.RespostasJson || "") }));
+  return rows.map((row) => ({ raw: row, dataHora: row.DataHora || "", pesquisador: row.Pesquisador || "", cidade: row.Cidade || "", regiao: row.Regiao || "", sexo: row.Sexo || "", faixaEtaria: row.FaixaEtaria || "", escolaridade: row.Escolaridade || "", renda: row.Renda || "", respostas: parseJson(row.RespostasJson || "") }));
 }
 
 function normalizeQuestions(questions) {
@@ -383,6 +427,75 @@ function calculateScaleStats(question) {
   return { question, counts, technicalAverage: avg, classification: classifyAverage(avg), approvalPercent: percent((counts.A || 0) + (counts.B || 0), valid), rejectionPercent: percent((counts.D || 0) + (counts.E || 0), valid), ntoPercent: percent(nto, total) };
 }
 
+function getAutomaticCrossTables() {
+  const fields = [
+    { key: "sexo", label: "Sexo" },
+    { key: "faixaEtaria", label: "Faixa etária" },
+    { key: "regiao", label: "Região/Bairro" }
+  ];
+  return getEligibleCrossQuestions().slice(0, 6).flatMap((question) => {
+    return fields.map((field) => {
+      const crossTable = calculateCrossPercentages(buildCrossTable(state.responses, question, field.key));
+      crossTable.question = question;
+      crossTable.field = field;
+      return crossTable;
+    }).filter((crossTable) => crossTable.total > 0);
+  });
+}
+
+function buildCrossTable(responses, question, profileField) {
+  const rows = optionKeys(question).map((key) => ({ key, label: question.alternatives[key] || key, total: 0, cells: {} }));
+  const byKey = rows.reduce((acc, row) => {
+    acc[row.key] = row;
+    return acc;
+  }, {});
+  const columnsMap = {};
+  let total = 0;
+
+  responses.forEach((response) => {
+    const answer = String(getAnswer(response, question) || "").trim().toUpperCase();
+    if (!byKey[answer]) return;
+
+    const profileValue = response[profileField] || response.raw?.[profileField] || "Não informado";
+    const label = formatLabel(profileValue);
+    const columnKey = normalizeGroupKey(label);
+    if (!columnsMap[columnKey]) columnsMap[columnKey] = { key: columnKey, label, total: 0 };
+
+    byKey[answer].cells[columnKey] = (byKey[answer].cells[columnKey] || 0) + 1;
+    byKey[answer].total += 1;
+    columnsMap[columnKey].total += 1;
+    total += 1;
+  });
+
+  return {
+    question,
+    profileField,
+    rows,
+    columns: Object.values(columnsMap).sort((a, b) => a.label.localeCompare(b.label, "pt-BR")),
+    total
+  };
+}
+
+function calculateCrossPercentages(crossTable) {
+  crossTable.rows.forEach((row) => {
+    row.percentTotal = percent(row.total, crossTable.total);
+    row.columns = {};
+    crossTable.columns.forEach((column) => {
+      const count = row.cells[column.key] || 0;
+      row.columns[column.key] = {
+        count,
+        percentColumn: percent(count, column.total),
+        percentTotal: percent(count, crossTable.total)
+      };
+    });
+  });
+  return crossTable;
+}
+
+function getEligibleCrossQuestions() {
+  return questionsByTypes(["fechada", "semifechada", "escala"]);
+}
+
 function countBy(rows, field) {
   return rows.reduce((acc, row) => { const key = formatLabel(row[field] || "Nao informado"); acc[key] = (acc[key] || 0) + 1; return acc; }, {});
 }
@@ -395,6 +508,7 @@ function normalizeQuestionType(type) { const n = normalizeText(type); if (n === 
 function isQuotaOpen(q) { return normalizeText(q.status) === "aberta" && Number(q.restante || 0) > 0; }
 function formatNumber(value) { return Number(value || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function formatLabel(value) { return String(value || "").replace(/\s+/g, " ").trim() || "Nao informado"; }
+function normalizeGroupKey(value) { return normalizeText(value).replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim() || "nao informado"; }
 function parseJson(value) { try { const parsed = JSON.parse(value || "[]"); return Array.isArray(parsed) ? parsed : []; } catch (e) { return []; } }
 function chunkArray(items, size) { const chunks = []; for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size)); return chunks; }
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
@@ -416,31 +530,4 @@ function detectThemes(text) {
 
 function isLowValueOpenAnswer(text) {
   return new Set(["", "nao sei", "nada", "nenhuma", "sem opiniao", "nao respondeu"]).has(normalizeText(text));
-}
-
-async function apiRequest(action, payload) {
-  try { return await fetchRequest(action, payload); } catch (error) { return jsonpRequest(action, payload); }
-}
-function buildApiUrl(action, payload, callbackName) {
-  const url = new URL(API_URL);
-  url.searchParams.set("action", action);
-  url.searchParams.set("payload", JSON.stringify(payload || {}));
-  if (callbackName) url.searchParams.set("callback", callbackName);
-  return url;
-}
-async function fetchRequest(action, payload) {
-  const response = await fetch(buildApiUrl(action, payload).toString(), { method: "GET", cache: "no-store", redirect: "follow" });
-  return JSON.parse(await response.text());
-}
-function jsonpRequest(action, payload) {
-  return new Promise((resolve, reject) => {
-    const callbackName = `dividadosReport_${Date.now()}`;
-    const script = document.createElement("script");
-    const timeoutId = setTimeout(() => { reject(new Error("Tempo esgotado ao chamar a API.")); cleanup(); }, 20000);
-    window[callbackName] = (data) => { resolve(data); cleanup(); };
-    script.onerror = () => { reject(new Error("Falha na API.")); cleanup(); };
-    function cleanup() { clearTimeout(timeoutId); delete window[callbackName]; script.remove(); }
-    script.src = buildApiUrl(action, payload, callbackName).toString();
-    document.body.appendChild(script);
-  });
 }

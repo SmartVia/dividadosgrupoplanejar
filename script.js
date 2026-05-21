@@ -1,7 +1,3 @@
-// Cole somente a URL publicada do seu Google Apps Script entre as aspas.
-// Esta URL precisa ser a URL do App da Web publicado no Apps Script.
-const API_URL = "https://script.google.com/macros/s/AKfycby1iZyydOBfSrNpKPx0HulX3gT-KhfUEaOxxcfCq6JaUyB2UF43dAVtKd9hNxSGOoD7/exec";
-
 const OFFLINE_QUEUE_KEY = "dividados_offline_queue_v1";
 const QUESTIONS_CACHE_KEY = "dividados_questions_cache_v3";
 const QUOTAS_CACHE_KEY = "dividados_quotas_cache_v1";
@@ -61,7 +57,7 @@ let gpsState = {
   status: "Indisponível"
 };
 
-checkQuotaButton.addEventListener("click", checkQuota);
+checkQuotaButton.addEventListener("click", handleCheckQuota);
 form.addEventListener("submit", submitSurvey);
 syncNowButton.addEventListener("click", syncPendingResponses);
 window.addEventListener("online", handleConnectionChange);
@@ -93,10 +89,10 @@ async function loadResearcherOptions() {
     populateResearcherOptions(cachedResearchers);
   }
 
-  if (!navigator.onLine || !API_URL) return;
+  if (!navigator.onLine || !isApiConfigured()) return;
 
   try {
-    const response = await apiRequest("getResearchers", {});
+    const response = await getResearchers();
     if (response.ok && response.researchers) {
       cacheResearchers(response.researchers);
       populateResearcherOptions(response.researchers);
@@ -140,10 +136,10 @@ async function loadQuotaOptions() {
     populateQuotaOptions(cachedQuotas);
   }
 
-  if (!navigator.onLine || !API_URL) return;
+  if (!navigator.onLine || !isApiConfigured()) return;
 
   try {
-    const response = await apiRequest("getQuotas", {});
+    const response = await getQuotas();
     if (response.ok && response.quotas && response.quotas.length) {
       cacheQuotas(response.quotas);
       populateQuotaOptions(response.quotas);
@@ -270,7 +266,7 @@ async function loadQuestions() {
     safeRenderQuestions(questionDefinitions);
   }
 
-  if (!navigator.onLine || !API_URL) {
+  if (!navigator.onLine || !isApiConfigured()) {
     if (!questionDefinitions.length) {
       questionDefinitions = getFallbackQuestions();
       safeRenderQuestions(questionDefinitions);
@@ -279,7 +275,7 @@ async function loadQuestions() {
   }
 
   try {
-    const response = await apiRequest("getQuestions", {});
+    const response = await getQuestions();
     if (response.ok && response.questions && response.questions.length) {
       questionDefinitions = normalizeQuestions(response.questions);
       cacheQuestions(questionDefinitions);
@@ -465,7 +461,7 @@ function validateProfile(profile) {
   return true;
 }
 
-async function checkQuota() {
+async function handleCheckQuota() {
   clearMessage();
 
   const profile = getProfileData();
@@ -479,8 +475,8 @@ async function checkQuota() {
     return;
   }
 
-  if (!API_URL) {
-    showMessage("Configure a constante API_URL no arquivo script.js antes de usar o formulario.", "error");
+  if (!isApiConfigured()) {
+    showMessage("Configure a URL da API no arquivo api-client.js antes de usar o formulario.", "error");
     return;
   }
 
@@ -489,7 +485,7 @@ async function checkQuota() {
   showMessage("Verificando...", "info");
 
   try {
-    const response = await apiRequest("checkQuota", {
+    const response = await checkQuota({
       sexo: profile.sexo,
       faixaEtaria: profile.faixaEtaria
     });
@@ -535,7 +531,7 @@ async function submitSurvey(event) {
   }
 
   try {
-    const response = await apiRequest("submitResponse", compactSubmitPayload(payload));
+    const response = await submitResponse(compactSubmitPayload(payload));
 
     if (response.ok) {
       showMessage("Entrevista salva com sucesso.", "success");
@@ -1017,7 +1013,7 @@ function saveOfflineResponse(payload) {
 }
 
 async function syncPendingResponses() {
-  if (syncInProgress || !navigator.onLine || !API_URL) return;
+  if (syncInProgress || !navigator.onLine || !isApiConfigured()) return;
 
   let queue = getPendingQueue();
   if (!queue.length) {
@@ -1039,7 +1035,7 @@ async function syncPendingResponses() {
         origem: "Offline",
         statusSincronizacao: "Sincronizada"
       };
-      const response = await apiRequest("submitResponse", compactSubmitPayload(payload));
+      const response = await submitResponse(compactSubmitPayload(payload));
 
       if (!response.ok) {
         stillPending.push(item);
@@ -1060,74 +1056,4 @@ async function syncPendingResponses() {
   } else {
     showMessage("Todas as pesquisas pendentes foram sincronizadas.", "success");
   }
-}
-
-async function apiRequest(action, payload) {
-  try {
-    return await fetchRequest(action, payload);
-  } catch (error) {
-    console.warn("Fetch falhou. Tentando JSONP.", error);
-    return jsonpRequest(action, payload);
-  }
-}
-
-function buildApiUrl(action, payload, callbackName) {
-  const url = new URL(API_URL);
-  url.searchParams.set("action", action);
-  url.searchParams.set("payload", JSON.stringify(payload || {}));
-
-  if (callbackName) {
-    url.searchParams.set("callback", callbackName);
-  }
-
-  return url;
-}
-
-async function fetchRequest(action, payload) {
-  const response = await fetch(buildApiUrl(action, payload).toString(), {
-    method: "GET",
-    cache: "no-store",
-    redirect: "follow"
-  });
-  const text = await response.text();
-
-  if (!response.ok) {
-    throw new Error(`API retornou HTTP ${response.status}: ${text.slice(0, 120)}`);
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch (error) {
-    throw new Error(`A API nao retornou JSON valido. Retorno recebido: ${text.slice(0, 160)}`);
-  }
-}
-
-function jsonpRequest(action, payload) {
-  return new Promise((resolve, reject) => {
-    const callbackName = `dividadosCallback_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-    const script = document.createElement("script");
-    const timeoutId = setTimeout(() => {
-      reject(new Error("Tempo esgotado ao chamar a API."));
-      cleanup();
-    }, 20000);
-
-    window[callbackName] = (data) => {
-      resolve(data);
-      cleanup();
-    };
-
-    script.onerror = () => {
-      reject(new Error("Falha na chamada da API."));
-      cleanup();
-    };
-
-    function cleanup() {
-      clearTimeout(timeoutId);
-      delete window[callbackName];
-      script.remove();
-    }
-
-    script.src = buildApiUrl(action, payload, callbackName).toString();
-    document.body.appendChild(script);
-  });
 }

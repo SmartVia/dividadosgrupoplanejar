@@ -121,6 +121,35 @@
       <div id="scaleQuestionsGrid" class="chart-grid question-chart-grid"></div>
     </section>
 
+    <section class="dashboard-section cross-section">
+      <div class="section-title-row">
+        <div>
+          <p class="eyebrow">Cruzamentos estatísticos</p>
+          <h2>Análise cruzada por perfil</h2>
+        </div>
+        <div class="header-actions">
+          <button id="printCrossButton" class="secondary-button" type="button">Imprimir</button>
+          <button id="exportCrossButton" class="secondary-button" type="button">Exportar CSV</button>
+        </div>
+      </div>
+      <div class="cross-controls no-print">
+        <label>Pergunta<select id="crossQuestionSelect"></select></label>
+        <label>Variável de cruzamento<select id="crossFieldSelect"></select></label>
+        <label>Visualização<select id="crossViewSelect">
+          <option value="both">Tabela e gráfico</option>
+          <option value="table">Somente tabela</option>
+          <option value="chart">Somente gráfico</option>
+        </select></label>
+        <button id="generateCrossButton" class="primary-button" type="button">Gerar cruzamento</button>
+      </div>
+      <div id="crossMessage" class="muted-text"></div>
+      <div id="crossChartWrap" class="chart-card cross-chart-card">
+        <h3 id="crossChartTitle">Cruzamento</h3>
+        <div class="chart-visual bar-visual"><canvas id="crossChart"></canvas></div>
+      </div>
+      <div id="crossTableWrap" class="table-wrap cross-table-wrap"></div>
+    </section>
+
     <section class="dashboard-section open-answer-section">
       <div class="section-title-row">
         <div>
@@ -150,6 +179,7 @@
     </section>
   </main>
 
-  <script src="dashboard.js?v=26"></script>
+  <script src="api-client.js?v=1"></script>
+  <script src="dashboard.js?v=27"></script>
 </body>
 </html>

@@ -241,6 +241,54 @@ textarea:focus {
   background: #f8fafc;
 }
 
+.cross-controls {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+  margin: 14px 0;
+}
+
+.cross-chart-card {
+  margin: 12px 0;
+  min-height: 360px;
+  box-shadow: none;
+}
+
+.cross-table-wrap {
+  margin-top: 12px;
+}
+
+.cross-table {
+  min-width: 780px;
+  font-size: 0.88rem;
+}
+
+.cross-table th,
+.cross-table td {
+  vertical-align: top;
+}
+
+.cross-table th small,
+.report-cross-table th small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.cross-table td strong,
+.cross-table td span,
+.report-cross-table td strong,
+.report-cross-table td span {
+  display: block;
+}
+
+.cross-table td span,
+.report-cross-table td span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
 .grid-two {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1081,6 +1129,7 @@ td {
 
   .filter-grid,
   .field-filter-grid,
+  .cross-controls,
   .insight-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1099,6 +1148,7 @@ td {
 
   .filter-grid,
   .field-filter-grid,
+  .cross-controls,
   .field-metrics,
   .executive-metrics,
   .executive-charts,
@@ -1927,7 +1977,8 @@ td {
 
 .report-kpi-grid,
 .report-chart-grid,
-.report-question-grid {
+.report-question-grid,
+.report-cross-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
@@ -1939,7 +1990,8 @@ td {
 }
 
 .report-chart-card,
-.report-question-card {
+.report-question-card,
+.report-cross-card {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 14px;
@@ -1955,6 +2007,36 @@ td {
 .report-question-card h3 {
   margin: 0 0 8px;
   font-size: 1rem;
+}
+
+.report-cross-card h3 {
+  margin: 0 0 6px;
+  font-size: 0.98rem;
+}
+
+.report-cross-card p {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.report-cross-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+}
+
+.report-cross-table th,
+.report-cross-table td {
+  border: 1px solid #dbe2ea;
+  padding: 5px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.report-cross-table td span {
+  color: var(--muted);
 }
 
 .report-context {
@@ -2039,6 +2121,7 @@ td {
   .report-kpi-grid,
   .report-chart-grid,
   .report-question-grid,
+  .report-cross-grid,
   .report-open-layout {
     grid-template-columns: 1fr;
   }
@@ -2099,8 +2182,14 @@ td {
     gap: 5mm;
   }
 
+  .report-cross-grid {
+    grid-template-columns: 1fr;
+    gap: 5mm;
+  }
+
   .report-chart-card,
-  .report-question-card {
+  .report-question-card,
+  .report-cross-card {
     break-inside: avoid;
     page-break-inside: avoid;
     padding: 4mm;

@@ -1,4 +1,4 @@
-const CACHE_NAME = "dividados-pesquisa-v15";
+const CACHE_NAME = "dividados-pesquisa-v17";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
@@ -6,6 +6,7 @@ const FILES_TO_CACHE = [
   "./campo.html",
   "./relatorio.html",
   "./style.css",
+  "./api-client.js",
   "./script.js",
   "./script-hotfix-options.js",
   "./dashboard.js",
