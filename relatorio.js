@@ -141,6 +141,10 @@ function renderReport() {
 }
 
 function renderCharts() {
+  if (typeof Chart === "undefined") {
+    reportRoot.insertAdjacentHTML("afterbegin", '<div class="message error no-print">A biblioteca de graficos nao carregou. Atualize a pagina com Ctrl+F5 e tente novamente.</div>');
+    return;
+  }
   createChart("profile_sexo", "doughnut", countBy(state.responses, "sexo"));
   createChart("profile_faixa", "bar", countBy(state.responses, "faixaEtaria"));
   createChart("profile_cidade", "bar", countBy(state.responses, "cidade"));

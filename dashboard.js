@@ -449,6 +449,7 @@ function renderCrossTable(container, crossTable) {
 function renderCrossChart(canvasId, crossTable) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
+  if (!isChartReady()) return;
   if (charts.cross_table) charts.cross_table.destroy();
   document.getElementById("crossChartTitle").textContent = `${crossTable.question.code} x ${crossTable.field.label}`;
   charts.cross_table = new Chart(canvas, {
@@ -712,6 +713,7 @@ function getOtherTextForQuestion(row, question) {
 function createChart(canvasId, key, type, source, options = {}) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
+  if (!isChartReady()) return;
   if (charts[key]) charts[key].destroy();
   const labels = Object.keys(source);
   const values = Object.values(source);
@@ -923,6 +925,12 @@ function showDashboardMessage(text, type) {
   dashboardMessage.textContent = text;
   dashboardMessage.className = `message ${type}`;
   dashboardMessage.hidden = false;
+}
+
+function isChartReady() {
+  if (typeof Chart !== "undefined") return true;
+  showDashboardMessage("Dados carregados, mas a biblioteca de graficos nao carregou. Atualize a pagina com Ctrl+F5.", "error");
+  return false;
 }
 
 function clearDashboardMessage() {
