@@ -42,12 +42,18 @@ const regiaoInput = document.getElementById("regiao");
 const cidadeOptions = document.getElementById("cidadeOptions");
 const pesquisadorInput = document.getElementById("pesquisador");
 const pesquisadorOptions = document.getElementById("pesquisadorOptions");
+const pesquisadorToggle = document.getElementById("pesquisadorToggle");
+const pesquisadorMenu = document.getElementById("pesquisadorMenu");
+const cidadeToggle = document.getElementById("cidadeToggle");
+const cidadeMenu = document.getElementById("cidadeMenu");
 const sexoSelect = document.getElementById("sexo");
 const faixaEtariaSelect = document.getElementById("faixaEtaria");
 
 let quotaIsOpen = false;
 let syncInProgress = false;
 let questionDefinitions = [];
+let pesquisadorSuggestions = [];
+let cidadeSuggestions = [];
 
 checkQuotaButton.addEventListener("click", checkQuota);
 form.addEventListener("submit", submitSurvey);
@@ -66,6 +72,7 @@ function initializeOfflineMode() {
   loadResearcherOptions();
   loadQuestions();
   setupLocationFields();
+  setupSuggestionFields();
   loadCityOptions();
 
   if (navigator.onLine) {
@@ -100,9 +107,11 @@ function populateResearcherOptions(researchers) {
     .map((researcher) => researcher.nome || researcher.Nome || "")
     .filter(Boolean);
 
-  pesquisadorOptions.innerHTML = uniqueOrderedValues(activeResearchers)
+  pesquisadorSuggestions = uniqueOrderedValues(activeResearchers);
+  pesquisadorOptions.innerHTML = pesquisadorSuggestions
     .map((name) => `<option value="${escapeHtml(name)}"></option>`)
     .join("");
+  refreshSuggestionMenu(pesquisadorInput, pesquisadorMenu, pesquisadorSuggestions, false);
 }
 
 function cacheResearchers(researchers) {
@@ -624,9 +633,99 @@ function getCachedCities() {
 function populateCityOptions(cities) {
   if (!cidadeOptions) return;
 
-  cidadeOptions.innerHTML = cities
+  cidadeSuggestions = uniqueOrderedValues(cities);
+  cidadeOptions.innerHTML = cidadeSuggestions
     .map((city) => `<option value="${escapeHtml(city)}"></option>`)
     .join("");
+  refreshSuggestionMenu(cidadeInput, cidadeMenu, cidadeSuggestions, false);
+}
+
+function setupSuggestionFields() {
+  setupSuggestionField({
+    input: pesquisadorInput,
+    button: pesquisadorToggle,
+    menu: pesquisadorMenu,
+    getOptions: () => pesquisadorSuggestions,
+    onSelect: formatPersonName,
+    maxVisible: 80
+  });
+
+  setupSuggestionField({
+    input: cidadeInput,
+    button: cidadeToggle,
+    menu: cidadeMenu,
+    getOptions: () => cidadeSuggestions,
+    onSelect: formatPlaceName,
+    maxVisible: 80
+  });
+}
+
+function setupSuggestionField(config) {
+  const { input, button, menu } = config;
+  if (!input || !button || !menu) return;
+
+  button.addEventListener("click", () => {
+    const shouldOpen = menu.classList.contains("hidden");
+    closeSuggestionMenus();
+    refreshSuggestionMenu(input, menu, config.getOptions(), shouldOpen, config);
+    if (shouldOpen) input.focus();
+  });
+
+  input.addEventListener("input", () => {
+    refreshSuggestionMenu(input, menu, config.getOptions(), !menu.classList.contains("hidden"), config);
+  });
+
+  input.addEventListener("focus", () => {
+    if (!menu.classList.contains("hidden")) {
+      refreshSuggestionMenu(input, menu, config.getOptions(), true, config);
+    }
+  });
+
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeSuggestionMenus();
+  });
+}
+
+document.addEventListener("click", (event) => {
+  if (event.target.closest(".combo-field")) return;
+  closeSuggestionMenus();
+});
+
+function refreshSuggestionMenu(input, menu, options, shouldShow, config = {}) {
+  if (!input || !menu) return;
+
+  const query = normalizeText(input.value);
+  const maxVisible = config.maxVisible || 80;
+  const filtered = (options || [])
+    .filter((option) => !query || normalizeText(option).includes(query))
+    .slice(0, maxVisible);
+
+  if (!shouldShow) {
+    menu.classList.add("hidden");
+    return;
+  }
+
+  menu.innerHTML = filtered.length
+    ? filtered.map((option) => `<button type="button" class="combo-option" data-value="${escapeHtml(option)}">${escapeHtml(option)}</button>`).join("")
+    : '<div class="combo-empty">Nenhuma opção encontrada. Pode digitar normalmente.</div>';
+
+  menu.querySelectorAll(".combo-option").forEach((item) => {
+    item.addEventListener("click", () => {
+      const value = item.dataset.value || "";
+      input.value = config.onSelect ? config.onSelect(value) : value;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      closeSuggestionMenus();
+      input.focus();
+    });
+  });
+
+  menu.classList.remove("hidden");
+}
+
+function closeSuggestionMenus() {
+  [pesquisadorMenu, cidadeMenu].forEach((menu) => {
+    if (menu) menu.classList.add("hidden");
+  });
 }
 
 function formatPlaceName(value) {

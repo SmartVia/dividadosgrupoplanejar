@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dividados Pesquisa</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
   <main class="app-shell">
@@ -33,14 +33,22 @@
 
           <label>
             Nome do pesquisador
-            <input type="text" id="pesquisador" name="pesquisador" list="pesquisadorOptions" required>
-            <datalist id="pesquisadorOptions"></datalist>
+            <div class="combo-field">
+              <input type="text" id="pesquisador" name="pesquisador" list="pesquisadorOptions" autocomplete="off" required>
+              <button type="button" id="pesquisadorToggle" class="combo-toggle" aria-label="Mostrar pesquisadores cadastrados">⌄</button>
+              <datalist id="pesquisadorOptions"></datalist>
+              <div id="pesquisadorMenu" class="combo-menu hidden"></div>
+            </div>
           </label>
 
           <label>
             Cidade
-            <input type="text" id="cidade" name="cidade" list="cidadeOptions" placeholder="Digite ou selecione a cidade" required>
-            <datalist id="cidadeOptions"></datalist>
+            <div class="combo-field">
+              <input type="text" id="cidade" name="cidade" list="cidadeOptions" autocomplete="off" placeholder="Digite ou selecione a cidade" required>
+              <button type="button" id="cidadeToggle" class="combo-toggle" aria-label="Mostrar cidades cadastradas">⌄</button>
+              <datalist id="cidadeOptions"></datalist>
+              <div id="cidadeMenu" class="combo-menu hidden"></div>
+            </div>
           </label>
 
           <label>
@@ -95,7 +103,7 @@
     </section>
   </main>
 
-  <script src="script.js?v=16"></script>
+  <script src="script.js?v=17"></script>
   <script src="script-hotfix-options.js?v=2"></script>
 </body>
 </html>

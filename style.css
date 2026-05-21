@@ -143,6 +143,72 @@ textarea:focus {
   outline: 3px solid rgba(15, 118, 110, 0.14);
 }
 
+.combo-field {
+  position: relative;
+  width: 100%;
+}
+
+.combo-field input {
+  padding-right: 54px;
+}
+
+.combo-toggle {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 38px;
+  min-height: 38px;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  color: var(--primary-dark);
+  background: #eefaf7;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.combo-toggle:focus {
+  outline: 3px solid rgba(15, 118, 110, 0.14);
+}
+
+.combo-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.14);
+}
+
+.combo-option,
+.combo-empty {
+  width: 100%;
+  min-height: 42px;
+  border: 0;
+  border-radius: 0;
+  padding: 10px 12px;
+  color: var(--text);
+  background: #fff;
+  font-weight: 700;
+  text-align: left;
+}
+
+.combo-option:hover,
+.combo-option:focus {
+  background: #e6f7f4;
+  outline: 0;
+}
+
+.combo-empty {
+  color: var(--muted);
+  cursor: default;
+}
+
 .grid-two {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
