@@ -8,7 +8,7 @@ const QUOTAS_CACHE_KEY = "dividados_quotas_cache_v1";
 const RESEARCHERS_CACHE_KEY = "dividados_researchers_cache_v1";
 const MAX_CLOSED_QUESTIONS = 100;
 const MAX_OPEN_QUESTIONS = 20;
-const OPTION_KEYS = ["A", "B", "C", "D", "E", "F"];
+const OPTION_KEYS = ["A", "B", "C", "D", "E", "F", "G", "H"];
 const SCALE_WEIGHTS = { A: 1, B: 2, C: 3, D: 4, E: 5, F: 6 };
 const CITY_CACHE_KEY = "dividados_mg_cities_v1";
 const MG_CITIES_API_URL = "https://servicodados.ibge.gov.br/api/v1/localidades/estados/MG/municipios";
@@ -309,6 +309,8 @@ function normalizeQuestions(questions) {
         d: alternatives.D || "",
         e: alternatives.E || "",
         f: alternatives.F || "",
+        g: alternatives.G || "",
+        h: alternatives.H || "",
         ordem: Number(question.ordem || question.Ordem || index + 1)
       };
     });
@@ -366,7 +368,7 @@ function renderQuestions(questions) {
       .map((key, optionIndex) => `
         <label>
           <input type="radio" name="${fieldName}" value="${key}" data-option-text="${escapeHtml(question.alternatives[key])}" ${optionIndex === 0 ? "required" : ""}>
-          ${key}) ${escapeHtml(question.alternatives[key])}${type === "escala" ? ` <small>Peso ${SCALE_WEIGHTS[key]}</small>` : ""}
+          ${key}) ${escapeHtml(question.alternatives[key])}${type === "escala" && SCALE_WEIGHTS[key] ? ` <small>Peso ${SCALE_WEIGHTS[key]}</small>` : ""}
         </label>
       `)
       .join("");
