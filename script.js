@@ -4,6 +4,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycby1iZyydOBfSrNpKPx0HulX
 
 const OFFLINE_QUEUE_KEY = "dividados_offline_queue_v1";
 const QUESTIONS_CACHE_KEY = "dividados_questions_cache_v3";
+const QUOTAS_CACHE_KEY = "dividados_quotas_cache_v1";
 const MAX_CLOSED_QUESTIONS = 100;
 const MAX_OPEN_QUESTIONS = 20;
 const OPTION_KEYS = ["A", "B", "C", "D", "E", "F"];
@@ -38,6 +39,8 @@ const syncNowButton = document.getElementById("syncNowButton");
 const cidadeInput = document.getElementById("cidade");
 const regiaoInput = document.getElementById("regiao");
 const cidadeOptions = document.getElementById("cidadeOptions");
+const sexoSelect = document.getElementById("sexo");
+const faixaEtariaSelect = document.getElementById("faixaEtaria");
 
 let quotaIsOpen = false;
 let syncInProgress = false;
@@ -48,14 +51,15 @@ form.addEventListener("submit", submitSurvey);
 syncNowButton.addEventListener("click", syncPendingResponses);
 window.addEventListener("online", handleConnectionChange);
 window.addEventListener("offline", handleConnectionChange);
-document.getElementById("sexo").addEventListener("change", closeQuestions);
-document.getElementById("faixaEtaria").addEventListener("change", closeQuestions);
+sexoSelect.addEventListener("change", closeQuestions);
+faixaEtariaSelect.addEventListener("change", closeQuestions);
 document.addEventListener("DOMContentLoaded", initializeOfflineMode);
 
 function initializeOfflineMode() {
   registerServiceWorker();
   updateConnectionBox();
   updatePendingCount();
+  loadQuotaOptions();
   loadQuestions();
   setupLocationFields();
   loadCityOptions();
@@ -63,6 +67,76 @@ function initializeOfflineMode() {
   if (navigator.onLine) {
     syncPendingResponses();
   }
+}
+
+async function loadQuotaOptions() {
+  const cachedQuotas = getCachedQuotas();
+  if (cachedQuotas.length) {
+    populateQuotaOptions(cachedQuotas);
+  }
+
+  if (!navigator.onLine || !API_URL) return;
+
+  try {
+    const response = await apiRequest("getQuotas", {});
+    if (response.ok && response.quotas && response.quotas.length) {
+      cacheQuotas(response.quotas);
+      populateQuotaOptions(response.quotas);
+    }
+  } catch (error) {
+    console.warn("Nao foi possivel carregar cotas da planilha. Usando opcoes atuais/cache.", error);
+  }
+}
+
+function populateQuotaOptions(quotas) {
+  const currentSexo = sexoSelect.value;
+  const currentFaixa = faixaEtariaSelect.value;
+  const sexos = uniqueOrderedValues(quotas.map((quota) => quota.sexo));
+  const faixas = uniqueOrderedValues(quotas.map((quota) => quota.faixaEtaria));
+
+  if (sexos.length) {
+    sexoSelect.innerHTML = '<option value="">Selecione</option>' + sexos
+      .map((sexo) => `<option value="${escapeHtml(sexo)}">${escapeHtml(sexo)}</option>`)
+      .join("");
+    if (sexos.some((sexo) => normalizeText(sexo) === normalizeText(currentSexo))) {
+      sexoSelect.value = sexos.find((sexo) => normalizeText(sexo) === normalizeText(currentSexo));
+    }
+  }
+
+  if (faixas.length) {
+    faixaEtariaSelect.innerHTML = '<option value="">Selecione</option>' + faixas
+      .map((faixa) => `<option value="${escapeHtml(faixa)}">${escapeHtml(faixa)}</option>`)
+      .join("");
+    if (faixas.some((faixa) => normalizeText(faixa) === normalizeText(currentFaixa))) {
+      faixaEtariaSelect.value = faixas.find((faixa) => normalizeText(faixa) === normalizeText(currentFaixa));
+    }
+  }
+}
+
+function cacheQuotas(quotas) {
+  localStorage.setItem(QUOTAS_CACHE_KEY, JSON.stringify(quotas));
+}
+
+function getCachedQuotas() {
+  try {
+    return JSON.parse(localStorage.getItem(QUOTAS_CACHE_KEY)) || [];
+  } catch (error) {
+    localStorage.removeItem(QUOTAS_CACHE_KEY);
+    return [];
+  }
+}
+
+function uniqueOrderedValues(values) {
+  const seen = new Set();
+  return values
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .filter((value) => {
+      const key = normalizeText(value);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
 
 function registerServiceWorker() {
