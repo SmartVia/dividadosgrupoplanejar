@@ -33,15 +33,15 @@ async function loadFieldReport() {
 
   try {
     const response = await getDashboardData();
-    if (!response.ok) throw new Error(response.message || "Nao foi possivel carregar o relatÃ³rio de campo.");
+    if (!response.ok) throw new Error(response.message || "Nao foi possivel carregar o relatório de campo.");
 
     fieldRows = normalizeRows(response.responses || []);
     populateFilters();
     renderFieldReport();
     fieldLastUpdated.textContent = `Atualizado em ${new Date().toLocaleTimeString("pt-BR")}`;
   } catch (error) {
-    console.error("Erro no relatÃ³rio de campo:", error);
-    showMessage(`Erro ao carregar relatÃ³rio: ${error.message}`, "error");
+    console.error("Erro no relatório de campo:", error);
+    showMessage(`Erro ao carregar relatório: ${error.message}`, "error");
   } finally {
     refreshFieldButton.disabled = false;
     refreshFieldButton.textContent = "Atualizar dados";
@@ -65,7 +65,7 @@ function normalizeRows(rows) {
       faixaEtaria: row.FaixaEtaria || row.faixaEtaria || "",
       latitude: row.Latitude || row.latitude || "",
       longitude: row.Longitude || row.longitude || "",
-      statusGPS: row.StatusGPS || row.statusGPS || "IndisponÃ­vel",
+      statusGPS: row.StatusGPS || row.statusGPS || "Indisponível",
       origem: row.Origem || row.origem || "",
       statusSincronizacao: row.StatusSincronizacao || row.statusSincronizacao || "",
       inicioDate: parseDate(inicio),
@@ -157,20 +157,20 @@ function getFilteredRows() {
 function exportCsv() {
   const rows = getFilteredRows();
   const headers = [
-    "Data/Hora InÃ­cio",
+    "Data/Hora Início",
     "Data/Hora Envio",
     "Pesquisador",
     "Cidade",
-    "RegiÃ£o/Bairro",
-    "EndereÃ§o",
-    "NÃºmero",
+    "Região/Bairro",
+    "Endereço",
+    "Número",
     "Sexo",
-    "Faixa EtÃ¡ria",
+    "Faixa Etária",
     "Latitude",
     "Longitude",
     "Status GPS",
     "Origem",
-    "Status SincronizaÃ§Ã£o"
+    "Status Sincronização"
   ];
   const body = rows.map((row) => [
     formatDateTime(row.dataHoraInicio),
@@ -218,7 +218,7 @@ function uniqueValues(rows, field) {
 
 function countBy(rows, field) {
   return rows.reduce((acc, row) => {
-    const key = formatLabel(row[field] || "NÃ£o informado");
+    const key = formatLabel(row[field] || "Não informado");
     acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {});
@@ -267,7 +267,7 @@ function sameValue(a, b) {
 }
 
 function formatLabel(value) {
-  return String(value || "").replace(/\s+/g, " ").trim() || "NÃ£o informado";
+  return String(value || "").replace(/\s+/g, " ").trim() || "Não informado";
 }
 
 function normalizeText(value) {
@@ -282,4 +282,5 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+
 

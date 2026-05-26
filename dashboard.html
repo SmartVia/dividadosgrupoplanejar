@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - Dividados Pesquisa</title>
-  <link rel="stylesheet" href="style.css?v=8">
+  <link rel="stylesheet" href="style.css?v=9">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     if (!window.Chart) {
@@ -20,10 +20,10 @@
         <h1>Painel Executivo</h1>
         <p class="dashboard-subtitle">Painel executivo de pesquisa quantitativa e qualitativa</p>
       </div>
-      <nav class="dashboard-nav" aria-label="NavegaÃ§Ã£o do dashboard">
-        <a class="dashboard-nav-link" href="index.html">FormulÃ¡rio</a>
-        <a class="secondary-button report-link" href="campo.html" target="_blank" rel="noopener">RelatÃ³rio de Campo</a>
-        <a class="secondary-button report-link" href="relatorio.html" target="_blank" rel="noopener">Gerar RelatÃ³rio PDF</a>
+      <nav class="dashboard-nav" aria-label="Navegação do dashboard">
+        <a class="dashboard-nav-link" href="index.html">Formulário</a>
+        <a class="secondary-button report-link" href="campo.html" target="_blank" rel="noopener">Relatório de Campo</a>
+        <a class="secondary-button report-link" href="relatorio.html" target="_blank" rel="noopener">Gerar Relatório PDF</a>
         <button id="refreshButton" class="primary-button" type="button">Atualizar dados</button>
       </nav>
     </header>
@@ -34,11 +34,11 @@
       <div class="section-title-row">
         <div>
           <p class="eyebrow">Filtros</p>
-          <h2>SegmentaÃ§Ã£o dos resultados</h2>
+          <h2>Segmentação dos resultados</h2>
         </div>
         <div class="filter-actions">
           <label class="visual-control">
-            VisualizaÃ§Ã£o do grÃ¡fico
+            Visualização do gráfico
             <select id="chartModeSelect">
               <option value="pie">Pizza</option>
               <option value="bar">Barra vertical</option>
@@ -50,20 +50,20 @@
       </div>
       <div class="filter-grid">
         <label>Cidade<select id="filterCidade"></select></label>
-        <label>RegiÃ£o/Bairro<select id="filterRegiao"></select></label>
+        <label>Região/Bairro<select id="filterRegiao"></select></label>
         <label>Pesquisador<select id="filterPesquisador"></select></label>
         <label>Sexo<select id="filterSexo"></select></label>
-        <label>Faixa etÃ¡ria<select id="filterFaixaEtaria"></select></label>
+        <label>Faixa etária<select id="filterFaixaEtaria"></select></label>
       </div>
     </section>
 
     <section class="metric-grid executive-metrics">
       <article class="metric-card"><span>Total de entrevistas</span><strong id="totalEntrevistas">0</strong></article>
       <article class="metric-card"><span>Cidades</span><strong id="totalCidade">0</strong></article>
-      <article class="metric-card"><span>RegiÃµes/Bairros</span><strong id="totalRegiao">0</strong></article>
+      <article class="metric-card"><span>Regiões/Bairros</span><strong id="totalRegiao">0</strong></article>
       <article class="metric-card"><span>Fechadas/Semifechadas</span><strong id="totalFechadas">0</strong></article>
       <article class="metric-card"><span>Perguntas escala</span><strong id="totalEscalas">0</strong></article>
-      <article class="metric-card"><span>AprovaÃ§Ã£o mÃ©dia</span><strong id="aprovacaoMedia">0%</strong></article>
+      <article class="metric-card"><span>Aprovação média</span><strong id="aprovacaoMedia">0%</strong></article>
       <article class="metric-card"><span>Cotas abertas</span><strong id="cotasAbertas">0</strong></article>
     </section>
 
@@ -81,20 +81,20 @@
       <div class="section-title-row">
         <div>
           <p class="eyebrow">Perfil da amostra</p>
-          <h2>DistribuiÃ§Ã£o das entrevistas</h2>
+          <h2>Distribuição das entrevistas</h2>
         </div>
         <span id="lastUpdated" class="muted-text"></span>
       </div>
       <div class="chart-grid executive-charts">
         <article class="chart-card"><h3>Sexo</h3><div class="chart-visual pie-visual"><canvas id="sexoChart"></canvas></div></article>
-        <article class="chart-card"><h3>Faixa etÃ¡ria</h3><div class="chart-visual bar-visual"><canvas id="faixaChart"></canvas></div></article>
+        <article class="chart-card"><h3>Faixa etária</h3><div class="chart-visual bar-visual"><canvas id="faixaChart"></canvas></div></article>
         <article class="chart-card"><h3>Cidade</h3><div class="chart-visual bar-visual"><canvas id="cidadeChart"></canvas></div></article>
-        <article class="chart-card"><h3>RegiÃ£o/Bairro</h3><div class="chart-visual bar-visual"><canvas id="regiaoChart"></canvas></div></article>
+        <article class="chart-card"><h3>Região/Bairro</h3><div class="chart-visual bar-visual"><canvas id="regiaoChart"></canvas></div></article>
         <article class="chart-card"><h3>Entrevistas por pesquisador</h3><div class="chart-visual bar-visual"><canvas id="pesquisadorChart"></canvas></div></article>
         <article class="chart-card"><h3>Status das cotas</h3><div class="chart-visual pie-visual"><canvas id="cotasChart"></canvas></div></article>
       </div>
       <div class="territory-ranking-card">
-        <h3>Ranking de regiÃƒÂµes com mais entrevistas</h3>
+        <h3>Ranking de regiões com mais entrevistas</h3>
         <div id="regionRanking" class="territory-ranking-list"></div>
       </div>
     </section>
@@ -102,14 +102,14 @@
     <section class="dashboard-section">
       <div class="section-title-row">
         <div>
-          <p class="eyebrow">Ranking das avaliaÃ§Ãµes</p>
-          <h2>Melhores e piores mÃ©dias das perguntas de escala</h2>
+          <p class="eyebrow">Ranking das avaliações</p>
+          <h2>Melhores e piores médias das perguntas de escala</h2>
         </div>
       </div>
       <div class="ranking-layout ranking-only">
         <article class="insight-card">
           <h3>Rankings por grupo</h3>
-          <p class="muted-text">Menor mÃ©dia tÃ©cnica = melhor avaliaÃ§Ã£o. N.T.O fica separado do cÃ¡lculo tÃ©cnico.</p>
+          <p class="muted-text">Menor média técnica = melhor avaliação. N.T.O fica separado do cálculo técnico.</p>
           <div id="scaleRanking" class="scale-ranking-groups"></div>
         </article>
       </div>
@@ -119,7 +119,7 @@
       <div class="section-title-row">
         <div>
           <p class="eyebrow">Perguntas fechadas e semifechadas</p>
-          <h2>DistribuiÃ§Ã£o quantitativa das alternativas</h2>
+          <h2>Distribuição quantitativa das alternativas</h2>
         </div>
       </div>
       <div id="closedQuestionsGrid" class="chart-grid question-chart-grid"></div>
@@ -129,7 +129,7 @@
       <div class="section-title-row">
         <div>
           <p class="eyebrow">Perguntas de Escala</p>
-          <h2>AnÃ¡lise tÃ©cnica, aprovaÃ§Ã£o, reprovaÃ§Ã£o e sem opiniÃ£o</h2>
+          <h2>Análise técnica, aprovação, reprovação e sem opinião</h2>
         </div>
       </div>
       <div id="scaleQuestionsGrid" class="chart-grid question-chart-grid"></div>
@@ -138,8 +138,8 @@
     <section class="dashboard-section cross-section">
       <div class="section-title-row">
         <div>
-          <p class="eyebrow">Cruzamentos estatÃ­sticos</p>
-          <h2>AnÃ¡lise cruzada por perfil</h2>
+          <p class="eyebrow">Cruzamentos estatísticos</p>
+          <h2>Análise cruzada por perfil</h2>
         </div>
         <div class="header-actions">
           <button id="printCrossButton" class="secondary-button" type="button">Imprimir</button>
@@ -148,11 +148,11 @@
       </div>
       <div class="cross-controls no-print">
         <label>Pergunta<select id="crossQuestionSelect"></select></label>
-        <label>VariÃ¡vel de cruzamento<select id="crossFieldSelect"></select></label>
-        <label>VisualizaÃ§Ã£o<select id="crossViewSelect">
-          <option value="both">Tabela e grÃ¡fico</option>
+        <label>Variável de cruzamento<select id="crossFieldSelect"></select></label>
+        <label>Visualização<select id="crossViewSelect">
+          <option value="both">Tabela e gráfico</option>
           <option value="table">Somente tabela</option>
-          <option value="chart">Somente grÃ¡fico</option>
+          <option value="chart">Somente gráfico</option>
         </select></label>
         <button id="generateCrossButton" class="primary-button" type="button">Gerar cruzamento</button>
       </div>
@@ -168,7 +168,7 @@
       <div class="section-title-row">
         <div>
           <p class="eyebrow">Qualitativo</p>
-          <h2>AnÃ¡lise das perguntas abertas</h2>
+          <h2>Análise das perguntas abertas</h2>
         </div>
         <div class="open-answer-total"><span>Respostas abertas</span><strong id="totalRespostasAbertas">0</strong></div>
       </div>
@@ -185,7 +185,7 @@
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Sexo</th><th>Faixa etÃ¡ria</th><th>Meta</th><th>Realizado</th><th>Restante</th><th>Status</th></tr>
+            <tr><th>Sexo</th><th>Faixa etária</th><th>Meta</th><th>Realizado</th><th>Restante</th><th>Status</th></tr>
           </thead>
           <tbody id="quotasTableBody"><tr><td colspan="6">Carregando dados...</td></tr></tbody>
         </table>
@@ -193,8 +193,10 @@
     </section>
   </main>
 
-  <script src="api-client.js?v=1"></script>
-  <script src="dashboard.js?v=34"></script>
+  <script src="api-client.js?v=2"></script>
+  <script src="dashboard.js?v=35"></script>
 </body>
 </html>
+
+
 

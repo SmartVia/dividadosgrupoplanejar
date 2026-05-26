@@ -36,7 +36,7 @@ let interviewStartAt = new Date().toISOString();
 let gpsState = {
   latitude: "",
   longitude: "",
-  status: "IndisponÃ­vel"
+  status: "Indisponível"
 };
 
 checkQuotaButton.addEventListener("click", handleCheckQuota);
@@ -208,17 +208,17 @@ function updateConnectionBox() {
   if (navigator.onLine) {
     offlineBox.classList.remove("is-offline");
     offlineBox.classList.add("is-online");
-    connectionStatus.textContent = "Online â€” enviando em tempo real";
+    connectionStatus.textContent = "Online — enviando em tempo real";
   } else {
     offlineBox.classList.remove("is-online");
     offlineBox.classList.add("is-offline");
-    connectionStatus.textContent = "Offline â€” respostas serÃ£o salvas neste aparelho";
+    connectionStatus.textContent = "Offline — respostas serão salvas neste aparelho";
   }
 }
 
 function updatePendingCount() {
   const total = getPendingQueue().length;
-  pendingCountText.textContent = `${total} ${total === 1 ? "pesquisa pendente" : "pesquisas pendentes"} de sincronizaÃ§Ã£o`;
+  pendingCountText.textContent = `${total} ${total === 1 ? "pesquisa pendente" : "pesquisas pendentes"} de sincronização`;
   syncNowButton.disabled = total === 0 || syncInProgress;
 }
 
@@ -240,7 +240,7 @@ function closeQuestions() {
 
 function startInterviewAudit() {
   interviewStartAt = new Date().toISOString();
-  if (!gpsState.latitude && gpsState.status !== "Negado pelo usuÃ¡rio") {
+  if (!gpsState.latitude && gpsState.status !== "Negado pelo usuário") {
     requestGpsLocation();
   }
 }
@@ -457,7 +457,7 @@ async function handleCheckQuota() {
     quotaIsOpen = true;
     startInterviewAudit();
     questionsSection.classList.remove("hidden");
-    showMessage("Sem internet. A verificaÃ§Ã£o de cota nÃ£o estÃ¡ disponÃ­vel agora, mas vocÃª pode continuar a pesquisa. A resposta serÃ¡ sincronizada depois.", "info");
+    showMessage("Sem internet. A verificação de cota não está disponível agora, mas você pode continuar a pesquisa. A resposta será sincronizada depois.", "info");
     return;
   }
 
@@ -533,7 +533,7 @@ async function submitSurvey(event) {
     payload.origem = "Offline";
     payload.statusSincronizacao = "Pendente";
     saveOfflineResponse(payload);
-    showMessage("Sem conexÃ£o com a API. A pesquisa foi salva neste aparelho e serÃ¡ sincronizada depois.", "info");
+    showMessage("Sem conexão com a API. A pesquisa foi salva neste aparelho e será sincronizada depois.", "info");
     resetFormAfterSave();
   } finally {
     submitButton.disabled = false;
@@ -563,7 +563,7 @@ function buildSurveyPayload(origin) {
     faixaEtaria: formData.get("faixaEtaria"),
     latitude: gpsState.latitude || "",
     longitude: gpsState.longitude || "",
-    statusGPS: gpsState.status || "IndisponÃ­vel",
+    statusGPS: gpsState.status || "Indisponível",
     respostas: questionAnswers,
     respostaAberta: firstOpenAnswer ? firstOpenAnswer.resposta : "",
     origem: origin,
@@ -586,7 +586,7 @@ function compactSubmitPayload(payload) {
     faixaEtaria: payload.faixaEtaria,
     latitude: payload.latitude || "",
     longitude: payload.longitude || "",
-    statusGPS: payload.statusGPS || "IndisponÃ­vel",
+    statusGPS: payload.statusGPS || "Indisponível",
     respostas: (payload.respostas || []).map((answer) => ({
       campo: answer.campo,
       id: answer.id,
@@ -763,7 +763,7 @@ function refreshSuggestionMenu(input, menu, options, shouldShow, config = {}) {
 
   menu.innerHTML = filtered.length
     ? filtered.map((option) => `<button type="button" class="combo-option" data-value="${escapeHtml(option)}">${escapeHtml(option)}</button>`).join("")
-    : '<div class="combo-empty">Nenhuma opÃ§Ã£o encontrada. Pode digitar normalmente.</div>';
+    : '<div class="combo-empty">Nenhuma opção encontrada. Pode digitar normalmente.</div>';
 
   menu.querySelectorAll(".combo-option").forEach((item) => {
     item.addEventListener("click", () => {
@@ -971,7 +971,7 @@ function escapeHtml(value) {
 }
 
 function finishOfflineSave() {
-  showMessage("Pesquisa salva neste aparelho. Ela serÃ¡ enviada automaticamente quando a internet voltar.", "success");
+  showMessage("Pesquisa salva neste aparelho. Ela será enviada automaticamente quando a internet voltar.", "success");
   resetFormAfterSave();
   submitButton.disabled = false;
   submitButton.textContent = "Enviar";
@@ -988,7 +988,7 @@ function resetFormAfterSave() {
 
 function requestGpsLocation() {
   if (!("geolocation" in navigator)) {
-    gpsState = { latitude: "", longitude: "", status: "IndisponÃ­vel" };
+    gpsState = { latitude: "", longitude: "", status: "Indisponível" };
     return;
   }
 
@@ -1004,7 +1004,7 @@ function requestGpsLocation() {
       gpsState = {
         latitude: "",
         longitude: "",
-        status: error && error.code === error.PERMISSION_DENIED ? "Negado pelo usuÃ¡rio" : "IndisponÃ­vel"
+        status: error && error.code === error.PERMISSION_DENIED ? "Negado pelo usuário" : "Indisponível"
       };
     },
     {
@@ -1086,10 +1086,11 @@ async function syncPendingResponses() {
   updatePendingCount();
 
   if (stillPending.length) {
-    showMessage(`${stillPending.length} pesquisa(s) ainda pendente(s). O sistema tentarÃ¡ novamente depois.`, "info");
+    showMessage(`${stillPending.length} pesquisa(s) ainda pendente(s). O sistema tentará novamente depois.`, "info");
   } else {
     showMessage("Todas as pesquisas pendentes foram sincronizadas.", "success");
   }
 }
+
 
 

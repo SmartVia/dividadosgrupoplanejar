@@ -1,4 +1,4 @@
-const OPTION_KEYS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
+﻿const OPTION_KEYS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
 const SCALE_WEIGHTS = { A: 1, B: 2, C: 3, D: 4, E: 5, F: 6 };
 const COLORS = {
   A: "#16a34a",
@@ -211,12 +211,12 @@ function renderRegionRanking(responses) {
   container.innerHTML = ranking.length
     ? ranking.map(([region, total], index) => `
       <div class="territory-ranking-item">
-        <strong>${index + 1}Âº</strong>
+        <strong>${index + 1}º</strong>
         <span>${escapeHtml(region)}</span>
         <em>${total} ${total === 1 ? "entrevista" : "entrevistas"}</em>
       </div>
     `).join("")
-    : '<p class="muted-text">Nenhuma regiÃ£o com entrevistas nos filtros atuais.</p>';
+    : '<p class="muted-text">Nenhuma região com entrevistas nos filtros atuais.</p>';
 }
 
 function renderResearcherSummary(responses) {
@@ -1239,3 +1239,5 @@ function parseResponseJson(value) {
     return [];
   }
 }
+
+
