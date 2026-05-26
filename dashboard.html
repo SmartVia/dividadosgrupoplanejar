@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - Dividados Pesquisa</title>
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=7">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     if (!window.Chart) {
@@ -98,15 +98,15 @@
     <section class="dashboard-section">
       <div class="section-title-row">
         <div>
-          <p class="eyebrow">Indicadores gerais</p>
-          <h2>Rankings e médias das perguntas escala</h2>
+          <p class="eyebrow">Ranking das avaliações</p>
+          <h2>Melhores e piores médias das perguntas de escala</h2>
         </div>
       </div>
       <div class="ranking-layout ranking-only">
         <article class="insight-card">
-          <h3>Ranking técnico</h3>
-          <p class="muted-text">Menor média técnica = melhor avaliação.</p>
-          <div id="scaleRanking" class="ranking-list"></div>
+          <h3>Rankings por grupo</h3>
+          <p class="muted-text">Menor média técnica = melhor avaliação. N.T.O fica separado do cálculo técnico.</p>
+          <div id="scaleRanking" class="scale-ranking-groups"></div>
         </article>
       </div>
     </section>
@@ -124,8 +124,8 @@
     <section class="dashboard-section">
       <div class="section-title-row">
         <div>
-          <p class="eyebrow">Perguntas escala</p>
-          <h2>Avaliação ponderada, aprovação e reprovação</h2>
+          <p class="eyebrow">Perguntas de Escala</p>
+          <h2>Análise técnica, aprovação, reprovação e sem opinião</h2>
         </div>
       </div>
       <div id="scaleQuestionsGrid" class="chart-grid question-chart-grid"></div>
@@ -190,6 +190,6 @@
   </main>
 
   <script src="api-client.js?v=1"></script>
-  <script src="dashboard.js?v=32"></script>
+  <script src="dashboard.js?v=33"></script>
 </body>
 </html>

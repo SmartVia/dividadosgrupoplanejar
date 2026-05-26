@@ -115,9 +115,11 @@ function renderReport() {
       </section>
     `).join("")}
 
+    ${scales.length ? scaleRankingReportPage(scales) : ""}
+
     ${chunkArray(scales, 4).map((chunk, page) => `
       <section class="print-page">
-        ${sectionTitle(`Perguntas Escala e Rankings${scales.length > 4 ? ` (${page + 1})` : ""}`)}
+        ${sectionTitle(`Análise das Perguntas de Escala${scales.length > 4 ? ` (${page + 1})` : ""}`)}
         <div class="report-question-grid">
           ${chunk.map((stats) => scaleBlock(stats)).join("")}
         </div>
@@ -188,19 +190,67 @@ function questionBlock(question, prefix) {
 
 function scaleBlock(stats) {
   return `
-    <article class="report-question-card avoid-break">
+    <article class="report-question-card avoid-break ${scaleStatusClass(stats.classification)}">
       <h3>${escapeHtml(stats.question.code)} — ${escapeHtml(stats.question.text)}</h3>
       <div class="report-scale-kpis">
+        <span>Total <strong>${stats.total}</strong></span>
+        <span>Válidas <strong>${stats.validResponses}</strong></span>
+        <span>Média geral <strong>${formatNumber(stats.averageWithNto)}</strong></span>
         <span>Média técnica <strong>${formatNumber(stats.technicalAverage)}</strong></span>
         <span>Classificação <strong>${stats.classification}</strong></span>
-        <span>Aprovação <strong>${stats.approvalPercent}%</strong></span>
-        <span>Reprovação <strong>${stats.rejectionPercent}%</strong></span>
-        <span>N.T.O <strong>${stats.ntoPercent}%</strong></span>
+        <span>Aprovação <strong>${stats.approvalPercent}% (${stats.approvalCount})</strong></span>
+        <span>Regular <strong>${stats.regularPercent}% (${stats.regularCount})</strong></span>
+        <span>Reprovação <strong>${stats.rejectionPercent}% (${stats.rejectionCount})</strong></span>
+        <span>N.T.O <strong>${stats.ntoPercent}% (${stats.ntoCount})</strong></span>
       </div>
       <canvas id="chart_scale_${stats.question.code}" width="220" height="220"></canvas>
       ${legend(stats.question, stats.counts)}
       ${renderReportStatsTable(stats.question, stats.counts, { scaleStats: stats })}
     </article>
+  `;
+}
+
+function scaleRankingReportPage(scales) {
+  const ranked = scales.filter((item) => item.validResponses > 0);
+  return `
+    <section class="print-page">
+      ${sectionTitle("Análise das Perguntas de Escala")}
+      <p class="report-context">Pesos: Ótimo = 1, Bom = 2, Regular = 3, Ruim = 4, Péssimo = 5 e N.T.O = 6. Quanto menor a média técnica, melhor a avaliação. A média técnica exclui N.T.O.</p>
+      <div class="report-scale-ranking-grid">
+        ${renderReportScaleRankingGroups(ranked)}
+      </div>
+    </section>
+  `;
+}
+
+function renderReportScaleRankingGroups(scaleStats) {
+  const groups = groupScaleStatsByGroup(scaleStats);
+  return Object.entries(groups).map(([group, items]) => {
+    const best = [...items].sort((a, b) => a.technicalAverage - b.technicalAverage);
+    const worst = [...items].sort((a, b) => b.technicalAverage - a.technicalAverage);
+    const groupAverage = average(items.map((item) => item.technicalAverage));
+    return `
+      <article class="scale-ranking-group report-scale-ranking-group avoid-break">
+        <div class="scale-ranking-group-header">
+          <strong>${escapeHtml(group)}</strong>
+          <span>Média do grupo: ${formatNumber(groupAverage)} | ${escapeHtml(classifyAverage(groupAverage))}</span>
+        </div>
+        <div class="scale-ranking-columns">
+          <div><h4>Melhores</h4>${best.map((item, index) => renderReportScaleRankingItem(item, index)).join("")}</div>
+          <div><h4>Piores</h4>${worst.map((item, index) => renderReportScaleRankingItem(item, index)).join("")}</div>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+function renderReportScaleRankingItem(item, index) {
+  return `
+    <div class="ranking-item ${scaleStatusClass(item.classification)}">
+      <strong>${index + 1}</strong>
+      <span>${escapeHtml(item.question.text)}</span>
+      <em>${formatNumber(item.technicalAverage)} | ${escapeHtml(item.classification)}</em>
+    </div>
   `;
 }
 
@@ -319,19 +369,25 @@ function legend(question, counts) {
   const total = keys.reduce((sum, key) => sum + (counts[key] || 0), 0);
   return `<div class="report-legend">${keys.map((key) => {
     const count = counts[key] || 0;
-    return `<div><span style="background:${COLORS[key]}"></span><strong>${key}</strong> — ${escapeHtml(question.alternatives[key] || key)} — ${percent(count, total)}% (${count} votos)</div>`;
+    const weight = question.type === "escala" ? ` — Peso ${getScaleWeight(key, question.alternatives[key])}` : "";
+    return `<div><span style="background:${COLORS[key]}"></span><strong>${key}</strong> — ${escapeHtml(question.alternatives[key] || key)} — ${percent(count, total)}% (${count} votos)${weight}</div>`;
   }).join("")}</div>`;
 }
 
 function renderReportStatsTable(question, counts, options = {}) {
-  const rows = buildReportStatsRows(question, counts);
+  const rows = buildReportStatsRows(question, counts, { includeNto: Boolean(options.scaleStats) });
   const maxCount = Math.max(...rows.items.map((item) => item.count), 0);
+  const isScale = Boolean(options.scaleStats);
   const scaleSummary = options.scaleStats ? `
     <div class="stats-summary-grid report-stats-summary">
-      <span>Média ponderada <strong>${formatNumber(options.scaleStats.averageWithNto)}</strong></span>
+      <span>Total <strong>${options.scaleStats.total}</strong></span>
+      <span>Válidas <strong>${options.scaleStats.validResponses}</strong></span>
+      <span>N.T.O <strong>${options.scaleStats.ntoCount} (${options.scaleStats.ntoPercent}%)</strong></span>
+      <span>Média geral <strong>${formatNumber(options.scaleStats.averageWithNto)}</strong></span>
       <span>Média técnica <strong>${formatNumber(options.scaleStats.technicalAverage)}</strong></span>
-      <span>Aprovação <strong>${options.scaleStats.approvalPercent}%</strong></span>
-      <span>Reprovação <strong>${options.scaleStats.rejectionPercent}%</strong></span>
+      <span>Aprovação <strong>${options.scaleStats.approvalPercent}% (${options.scaleStats.approvalCount})</strong></span>
+      <span>Regular <strong>${options.scaleStats.regularPercent}% (${options.scaleStats.regularCount})</strong></span>
+      <span>Reprovação <strong>${options.scaleStats.rejectionPercent}% (${options.scaleStats.rejectionCount})</strong></span>
       <span>Classificação <strong>${escapeHtml(options.scaleStats.classification)}</strong></span>
     </div>
   ` : "";
@@ -347,12 +403,12 @@ function renderReportStatsTable(question, counts, options = {}) {
     <div class="stats-table-block report-stats-table-block">
       <div class="stats-table-header">
         <strong>Tabela estatística</strong>
-        <span>${rows.totalValid} válida(s)${rows.ntoTotal ? ` | N.T.O: ${rows.ntoTotal}` : ""}</span>
+        <span>${rows.totalValid} válida(s)${rows.ntoTotal && !isScale ? ` | N.T.O: ${rows.ntoTotal}` : ""}</span>
       </div>
       ${scaleSummary}
       <table class="stats-table report-stats-table">
         <thead>
-          <tr><th>Pos.</th><th>Alt.</th><th>Texto</th><th>Votos</th><th>%</th><th>Proporção</th></tr>
+          <tr><th>Pos.</th><th>Alt.</th><th>Texto</th>${isScale ? "<th>Peso</th>" : ""}<th>Votos</th><th>%</th><th>Proporção</th></tr>
         </thead>
         <tbody>
           ${rows.items.length ? rows.items.map((item, index) => `
@@ -360,11 +416,12 @@ function renderReportStatsTable(question, counts, options = {}) {
               <td>${index + 1}º</td>
               <td><strong>${escapeHtml(item.key)}</strong></td>
               <td>${escapeHtml(item.label)}${index === 0 && item.count > 0 ? ' <span class="winner-badge">Mais votada</span>' : ""}</td>
+              ${isScale ? `<td>Peso ${item.weight}</td>` : ""}
               <td>${item.count}</td>
               <td>${item.percent}%</td>
               <td><div class="proportion-bar"><span style="width:${maxCount ? Math.round((item.count / maxCount) * 100) : 0}%"></span></div></td>
             </tr>
-          `).join("") : '<tr><td colspan="6">Sem respostas válidas.</td></tr>'}
+          `).join("") : `<tr><td colspan="${isScale ? 7 : 6}">Sem respostas válidas.</td></tr>`}
         </tbody>
       </table>
       ${rows.ntoTotal ? `<p class="nto-note">N.T.O separado: <strong>${rows.ntoTotal}</strong></p>` : ""}
@@ -373,18 +430,22 @@ function renderReportStatsTable(question, counts, options = {}) {
   `;
 }
 
-function buildReportStatsRows(question, counts) {
+function buildReportStatsRows(question, counts, options = {}) {
   const keys = optionKeys(question);
   const ntoKeys = keys.filter((key) => isNtoOption(question.alternatives[key]));
   const validKeys = keys.filter((key) => !ntoKeys.includes(key));
+  const rowKeys = options.includeNto ? keys : validKeys;
+  const percentBaseKeys = options.includeNto ? keys : validKeys;
+  const percentBase = percentBaseKeys.reduce((sum, key) => sum + (counts[key] || 0), 0);
   const totalValid = validKeys.reduce((sum, key) => sum + (counts[key] || 0), 0);
   const ntoTotal = ntoKeys.reduce((sum, key) => sum + (counts[key] || 0), 0);
-  const items = validKeys.map((key, index) => ({
+  const items = rowKeys.map((key) => ({
     key,
     label: question.alternatives[key] || key,
     count: counts[key] || 0,
-    percent: percent(counts[key] || 0, totalValid),
-    originalIndex: index
+    percent: percent(counts[key] || 0, percentBase),
+    weight: getScaleWeight(key, question.alternatives[key]),
+    originalIndex: keys.indexOf(key)
   })).sort((a, b) => {
     if (b.count !== a.count) return b.count - a.count;
     return a.originalIndex - b.originalIndex;
@@ -611,14 +672,17 @@ function calculateScaleStats(question) {
   const counts = countQuestion(question);
   const keys = optionKeys(question);
   const ntoKeys = keys.filter((key) => isNtoOption(question.alternatives[key]));
-  const validKeys = keys.filter((key) => !ntoKeys.includes(key) && SCALE_WEIGHTS[key]);
+  const validKeys = keys.filter((key) => !ntoKeys.includes(key) && getScaleWeight(key, question.alternatives[key]) <= 5);
   const total = keys.reduce((sum, key) => sum + (counts[key] || 0), 0);
   const valid = validKeys.reduce((sum, key) => sum + (counts[key] || 0), 0);
-  const weightedWithNto = keys.reduce((sum, key) => sum + ((counts[key] || 0) * (SCALE_WEIGHTS[key] || 0)), 0);
-  const weighted = validKeys.reduce((sum, key) => sum + ((counts[key] || 0) * SCALE_WEIGHTS[key]), 0);
+  const weightedWithNto = keys.reduce((sum, key) => sum + ((counts[key] || 0) * getScaleWeight(key, question.alternatives[key])), 0);
+  const weighted = validKeys.reduce((sum, key) => sum + ((counts[key] || 0) * getScaleWeight(key, question.alternatives[key])), 0);
   const avg = valid ? weighted / valid : 0;
+  const approval = (counts.A || 0) + (counts.B || 0);
+  const regular = counts.C || 0;
+  const rejection = (counts.D || 0) + (counts.E || 0);
   const nto = ntoKeys.reduce((sum, key) => sum + (counts[key] || 0), 0);
-  return { question, counts, averageWithNto: total ? weightedWithNto / total : 0, technicalAverage: avg, classification: classifyAverage(avg), approvalPercent: percent((counts.A || 0) + (counts.B || 0), valid), rejectionPercent: percent((counts.D || 0) + (counts.E || 0), valid), ntoPercent: percent(nto, total) };
+  return { question, counts, total, validResponses: valid, averageWithNto: total ? weightedWithNto / total : 0, technicalAverage: avg, classification: classifyAverage(avg), approvalCount: approval, approvalPercent: percent(approval, valid), regularCount: regular, regularPercent: percent(regular, valid), rejectionCount: rejection, rejectionPercent: percent(rejection, valid), ntoCount: nto, ntoPercent: percent(nto, total) };
 }
 
 function getAutomaticCrossTables() {
@@ -696,8 +760,11 @@ function countBy(rows, field) {
 
 function optionKeys(question) { return OPTION_KEYS.filter((key) => question.alternatives[key]); }
 function isNtoOption(value) { const normalized = normalizeText(value).replace(/\./g, "").replace(/\s+/g, ""); return normalized === "nto" || normalized === "naotemopiniao" || normalized === "semopiniao"; }
+function getScaleWeight(key, label) { const normalized = normalizeText(label).replace(/\./g, "").replace(/\s+/g, ""); if (normalized === "otimo") return 1; if (normalized === "bom") return 2; if (normalized === "regular") return 3; if (normalized === "ruim") return 4; if (normalized === "pessimo") return 5; if (isNtoOption(label)) return 6; return SCALE_WEIGHTS[key] || 0; }
 function percent(value, total) { return total ? Math.round((value / total) * 100) : 0; }
 function classifyAverage(value) { if (!value) return "Sem dados"; if (value <= 1.8) return "Excelente"; if (value <= 2.6) return "Boa"; if (value <= 3.4) return "Regular"; if (value <= 4.2) return "Ruim"; return "Pessima"; }
+function scaleStatusClass(classification) { const normalized = normalizeText(classification); if (normalized === "excelente" || normalized === "boa") return "scale-status-good"; if (normalized === "regular") return "scale-status-warning"; if (normalized === "ruim" || normalized === "pessima") return "scale-status-bad"; return "scale-status-empty"; }
+function groupScaleStatsByGroup(scaleStats) { return scaleStats.reduce((acc, item) => { const group = item.question.group || "Geral"; if (!acc[group]) acc[group] = []; acc[group].push(item); return acc; }, {}); }
 function normalizeQuestionType(type) { const n = normalizeText(type); if (n === "escala") return "escala"; if (n === "semifechada" || n === "semi fechada" || n === "semi-fechada") return "semifechada"; if (n === "abertatexto" || n === "aberta" || n === "texto") return "abertatexto"; return "fechada"; }
 function isQuotaOpen(q) { return normalizeText(q.status) === "aberta" && Number(q.restante || 0) > 0; }
 function formatNumber(value) { return Number(value || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
