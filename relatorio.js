@@ -484,6 +484,7 @@ function createQuestionChart(canvasId, counts, question) {
 function createChart(canvasId, type, source, colors, options = {}) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
+  prepareReportChartCanvas(canvas, type);
   setReportChartVisualMode(canvas, options.tower3d ? "tower" : type === "bar" ? "bar" : "pie");
   const labels = Object.keys(source);
   const values = Object.values(source);
@@ -500,13 +501,24 @@ function createChart(canvasId, type, source, colors, options = {}) {
     options: {
       responsive: false,
       maintainAspectRatio: true,
+      aspectRatio: type === "bar" ? 2.25 : 1,
       animation: false,
       devicePixelRatio: 4,
+      layout: {
+        padding: type === "bar" ? { top: 8, right: 10, bottom: 2, left: 2 } : { top: 2, right: 2, bottom: 2, left: 2 }
+      },
       plugins: {
-        legend: { display: type !== "bar" && total > 0, position: "bottom", labels: { boxWidth: 9, font: { size: 9 } } },
+        legend: {
+          display: type !== "bar" && total > 0,
+          position: "bottom",
+          labels: { boxWidth: 8, boxHeight: 8, padding: 8, font: { size: 9, weight: "600" }, usePointStyle: true, pointStyle: "rectRounded" }
+        },
         tower3d: { enabled: Boolean(options.tower3d) }
       },
-      scales: type === "bar" ? { x: { grid: { display: false }, ticks: { font: { size: 9 } } }, y: { beginAtZero: true, ticks: { precision: 0, font: { size: 9 } } } } : {}
+      scales: type === "bar" ? {
+        x: { grid: { display: false }, ticks: { font: { size: 9, weight: "600" }, maxRotation: 15, minRotation: 0, autoSkip: true } },
+        y: { beginAtZero: true, ticks: { precision: 0, font: { size: 9 } }, grid: { color: "rgba(148, 163, 184, 0.24)" } }
+      } : {}
     }
   });
 }
@@ -514,6 +526,7 @@ function createChart(canvasId, type, source, colors, options = {}) {
 function createCrossChart(canvasId, crossTable) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
+  prepareReportChartCanvas(canvas, "bar", true);
   const tower3d = getReportChartMode() === "tower";
   setReportChartVisualMode(canvas, tower3d ? "tower" : "bar");
   const datasets = crossTable.rows
@@ -535,18 +548,30 @@ function createCrossChart(canvasId, crossTable) {
     options: {
       responsive: false,
       maintainAspectRatio: true,
+      aspectRatio: 2.45,
       animation: false,
       devicePixelRatio: 4,
       plugins: {
-        legend: { position: "bottom", labels: { boxWidth: 9, font: { size: 9 } } },
+        legend: { position: "bottom", labels: { boxWidth: 8, boxHeight: 8, padding: 8, font: { size: 9, weight: "600" }, usePointStyle: true, pointStyle: "rectRounded" } },
         tower3d: { enabled: tower3d }
       },
       scales: {
-        x: { grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 20, minRotation: 0 } },
-        y: { beginAtZero: true, ticks: { precision: 0, font: { size: 9 } } }
+        x: { grid: { display: false }, ticks: { font: { size: 9, weight: "600" }, maxRotation: 15, minRotation: 0, autoSkip: true } },
+        y: { beginAtZero: true, ticks: { precision: 0, font: { size: 9 } }, grid: { color: "rgba(148, 163, 184, 0.24)" } }
       }
     }
   });
+}
+
+function prepareReportChartCanvas(canvas, type, wide = false) {
+  if (type === "bar") {
+    canvas.width = wide ? 920 : 620;
+    canvas.height = wide ? 300 : 260;
+    return;
+  }
+
+  canvas.width = 300;
+  canvas.height = 300;
 }
 
 const reportTower3dPlugin = {

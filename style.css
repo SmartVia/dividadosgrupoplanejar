@@ -16,6 +16,348 @@
   --shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
 }
 
+/* Dashboard chart polish: fixed proportions without heavy effects. */
+.dashboard-page .chart-grid {
+  gap: 14px;
+  align-items: start;
+}
+
+.dashboard-page .executive-charts {
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+}
+
+.dashboard-page .question-chart-grid {
+  grid-template-columns: repeat(auto-fit, minmax(390px, 1fr));
+}
+
+.dashboard-page .chart-card {
+  min-height: 0 !important;
+  border-color: #d9e2ec;
+  border-radius: 12px;
+  padding: 14px;
+  gap: 10px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+}
+
+.dashboard-page .chart-card h3 {
+  color: #101828;
+  font-size: 0.96rem;
+  line-height: 1.25;
+}
+
+.dashboard-page .chart-visual {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.dashboard-page .pie-visual {
+  width: min(100%, 220px);
+  max-width: 220px;
+  height: 220px;
+  min-height: 0;
+  aspect-ratio: 1 / 1;
+}
+
+.dashboard-page .pie-visual canvas {
+  width: 220px !important;
+  height: 220px !important;
+  max-width: 100% !important;
+  max-height: 220px !important;
+  aspect-ratio: 1 / 1;
+}
+
+.dashboard-page .bar-visual {
+  width: 100%;
+  height: 225px;
+  min-height: 0;
+  max-height: 225px;
+}
+
+.dashboard-page .pie-visual.chart-bar-mode,
+.dashboard-page .pie-visual.chart-tower-3d {
+  width: 100%;
+  max-width: none;
+  height: 225px;
+  aspect-ratio: auto;
+}
+
+.dashboard-page .bar-visual canvas {
+  width: 100% !important;
+  height: 225px !important;
+  max-height: 225px !important;
+}
+
+.dashboard-page .pie-visual.chart-bar-mode canvas,
+.dashboard-page .pie-visual.chart-tower-3d canvas {
+  width: 100% !important;
+  height: 225px !important;
+  max-height: 225px !important;
+  aspect-ratio: auto;
+}
+
+.dashboard-page .cross-chart-card {
+  min-height: 0;
+}
+
+.dashboard-page .cross-chart-card .bar-visual {
+  height: 255px;
+  max-height: 255px;
+}
+
+.dashboard-page .cross-chart-card .bar-visual canvas {
+  height: 255px !important;
+  max-height: 255px !important;
+}
+
+.dashboard-page .question-result-card {
+  align-content: start;
+  gap: 12px;
+}
+
+.dashboard-page .question-card-header {
+  gap: 4px;
+}
+
+.dashboard-page .question-card-header span {
+  padding: 3px 9px;
+  font-size: 0.74rem;
+}
+
+.dashboard-page .question-card-header h3 {
+  font-size: 0.94rem;
+  line-height: 1.28;
+}
+
+.dashboard-page .question-card-header small {
+  color: #667085;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.dashboard-page .question-chart-layout {
+  grid-template-columns: minmax(170px, 205px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.dashboard-page .question-canvas-wrap {
+  display: grid;
+  place-items: center;
+  width: 205px;
+  max-width: 100%;
+  height: 205px;
+  min-height: 0;
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.dashboard-page .question-canvas-wrap canvas {
+  width: 205px !important;
+  height: 205px !important;
+  max-width: 100% !important;
+  max-height: 205px !important;
+}
+
+.dashboard-page .question-canvas-wrap.chart-bar-mode,
+.dashboard-page .question-canvas-wrap.chart-tower-3d {
+  width: 100%;
+  height: 205px;
+  aspect-ratio: auto;
+}
+
+.dashboard-page .question-canvas-wrap.chart-bar-mode canvas,
+.dashboard-page .question-canvas-wrap.chart-tower-3d canvas {
+  width: 100% !important;
+  height: 205px !important;
+}
+
+.dashboard-page .question-legend {
+  gap: 7px;
+  align-self: center;
+}
+
+.dashboard-page .legend-row {
+  grid-template-columns: 9px minmax(0, 1fr);
+  gap: 8px;
+  color: #475467;
+  font-size: 0.82rem;
+  line-height: 1.28;
+}
+
+.dashboard-page .legend-color {
+  width: 9px;
+  height: 9px;
+  margin-top: 3px;
+  border-radius: 3px;
+}
+
+.dashboard-page .stats-table-block {
+  margin-top: 8px;
+  padding-top: 10px;
+}
+
+.dashboard-page .stats-table th,
+.dashboard-page .stats-table td {
+  padding: 7px 8px;
+  font-size: 0.78rem;
+}
+
+.dashboard-page .chart-tower-3d canvas,
+.dashboard-page .chart-bar-mode canvas {
+  filter: drop-shadow(5px 6px 5px rgba(15, 23, 42, 0.10));
+}
+
+.report-page .report-chart-card,
+.report-page .report-question-card {
+  overflow: hidden;
+}
+
+.report-page .report-chart-card canvas,
+.report-page .report-question-card canvas {
+  max-width: 100%;
+}
+
+.report-page .report-chart-card canvas[id*="sexo"],
+.report-page .report-chart-card canvas[id*="cotas"],
+.report-page .report-question-card canvas {
+  width: 220px !important;
+  height: 220px !important;
+  aspect-ratio: 1 / 1;
+}
+
+.report-page .report-chart-card canvas[id*="faixa"],
+.report-page .report-chart-card canvas[id*="cidade"],
+.report-page .report-chart-card canvas[id*="regiao"] {
+  width: 100% !important;
+  height: 190px !important;
+}
+
+.report-page .report-question-card.chart-bar-mode canvas,
+.report-page .report-question-card.chart-tower-3d canvas {
+  width: 100% !important;
+  height: 190px !important;
+  aspect-ratio: auto;
+}
+
+@media (max-width: 760px) {
+  .dashboard-page .executive-charts,
+  .dashboard-page .question-chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-page .question-chart-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-page .pie-visual,
+  .dashboard-page .question-canvas-wrap {
+    width: min(100%, 210px);
+    height: 210px;
+  }
+
+  .dashboard-page .pie-visual canvas,
+  .dashboard-page .question-canvas-wrap canvas {
+    width: 210px !important;
+    height: 210px !important;
+  }
+
+  .dashboard-page .bar-visual,
+  .dashboard-page .pie-visual.chart-bar-mode,
+  .dashboard-page .pie-visual.chart-tower-3d,
+  .dashboard-page .question-canvas-wrap.chart-bar-mode,
+  .dashboard-page .question-canvas-wrap.chart-tower-3d {
+    height: 215px;
+  }
+
+  .dashboard-page .bar-visual canvas,
+  .dashboard-page .pie-visual.chart-bar-mode canvas,
+  .dashboard-page .pie-visual.chart-tower-3d canvas,
+  .dashboard-page .question-canvas-wrap.chart-bar-mode canvas,
+  .dashboard-page .question-canvas-wrap.chart-tower-3d canvas {
+    height: 215px !important;
+  }
+}
+
+@media print {
+  .dashboard-page .chart-card {
+    padding: 4mm;
+    box-shadow: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .dashboard-page .executive-charts,
+  .dashboard-page .question-chart-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 5mm !important;
+  }
+
+  .dashboard-page .pie-visual,
+  .dashboard-page .question-canvas-wrap {
+    width: 48mm !important;
+    height: 48mm !important;
+  }
+
+  .dashboard-page .pie-visual canvas,
+  .dashboard-page .question-canvas-wrap canvas {
+    width: 48mm !important;
+    height: 48mm !important;
+  }
+
+  .dashboard-page .bar-visual,
+  .dashboard-page .pie-visual.chart-bar-mode,
+  .dashboard-page .pie-visual.chart-tower-3d,
+  .dashboard-page .question-canvas-wrap.chart-bar-mode,
+  .dashboard-page .question-canvas-wrap.chart-tower-3d {
+    height: 48mm !important;
+    max-height: 48mm !important;
+  }
+
+  .dashboard-page .bar-visual canvas,
+  .dashboard-page .pie-visual.chart-bar-mode canvas,
+  .dashboard-page .pie-visual.chart-tower-3d canvas,
+  .dashboard-page .question-canvas-wrap.chart-bar-mode canvas,
+  .dashboard-page .question-canvas-wrap.chart-tower-3d canvas {
+    width: 100% !important;
+    height: 48mm !important;
+  }
+
+  .dashboard-page .question-chart-layout {
+    grid-template-columns: 48mm minmax(0, 1fr);
+    gap: 4mm;
+  }
+
+  .report-page .report-chart-card canvas,
+  .report-page .report-question-card canvas {
+    image-rendering: auto;
+  }
+
+  .report-page .report-chart-card canvas[id*="sexo"],
+  .report-page .report-chart-card canvas[id*="cotas"],
+  .report-page .report-question-card canvas {
+    width: 45mm !important;
+    height: 45mm !important;
+  }
+
+  .report-page .report-chart-card canvas[id*="faixa"],
+  .report-page .report-chart-card canvas[id*="cidade"],
+  .report-page .report-chart-card canvas[id*="regiao"] {
+    width: 74mm !important;
+    height: 42mm !important;
+  }
+
+  .report-page .report-question-card.chart-bar-mode canvas,
+  .report-page .report-question-card.chart-tower-3d canvas {
+    width: 74mm !important;
+    height: 42mm !important;
+  }
+}
+
 * {
   box-sizing: border-box;
 }

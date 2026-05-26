@@ -499,6 +499,7 @@ function renderCrossChart(canvasId, crossTable) {
   if (!canvas) return;
   if (!isChartReady()) return;
   if (charts.cross_table) charts.cross_table.destroy();
+  prepareChartCanvas(canvas, "bar");
   setChartVisualMode(canvas, getChartMode());
   document.getElementById("crossChartTitle").textContent = `${crossTable.question.code} x ${crossTable.field.label}`;
   charts.cross_table = new Chart(canvas, {
@@ -516,13 +517,14 @@ function renderCrossChart(canvasId, crossTable) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      resizeDelay: 120,
       plugins: {
-        legend: { position: "bottom", labels: { boxWidth: 12 } },
+        legend: { position: "bottom", labels: { boxWidth: 10, padding: 10, font: { size: 11, weight: "600" } } },
         tower3d: { enabled: getChartMode() === "tower" }
       },
       scales: {
-        x: { grid: { display: false } },
-        y: { beginAtZero: true, ticks: { precision: 0 } }
+        x: { grid: { display: false }, ticks: { color: "#667085", font: { size: 11, weight: "600" }, maxRotation: 20, minRotation: 0 } },
+        y: { beginAtZero: true, ticks: { precision: 0, color: "#667085", font: { size: 11 } }, grid: { color: "rgba(148, 163, 184, 0.22)" } }
       }
     }
   });
@@ -915,6 +917,7 @@ function createChart(canvasId, key, type, source, options = {}) {
   if (!canvas) return;
   if (!isChartReady()) return;
   if (charts[key]) charts[key].destroy();
+  prepareChartCanvas(canvas, type);
   setChartVisualMode(canvas, options.tower3d ? "tower" : type === "bar" ? "bar" : "pie");
   const labels = Object.keys(source);
   const values = Object.values(source);
@@ -933,24 +936,62 @@ function createChart(canvasId, key, type, source, options = {}) {
     },
     options: {
       responsive: true,
-      maintainAspectRatio: true,
-      aspectRatio: type === "bar" ? 1.7 : 1,
+      maintainAspectRatio: type !== "bar",
+      aspectRatio: type === "bar" ? 2.35 : 1,
+      resizeDelay: 120,
       devicePixelRatio: Math.max(window.devicePixelRatio || 1, 2),
       animation: false,
+      layout: {
+        padding: type === "bar" ? { top: 8, right: 10, bottom: 4, left: 4 } : { top: 2, right: 2, bottom: 2, left: 2 }
+      },
       plugins: {
-        legend: { display: type !== "bar", position: "bottom", labels: { boxWidth: 12, padding: 12 } },
+        legend: {
+          display: type !== "bar",
+          position: "bottom",
+          labels: {
+            boxWidth: 9,
+            boxHeight: 9,
+            padding: 10,
+            color: "#475467",
+            font: { size: 11, weight: "600" },
+            usePointStyle: true,
+            pointStyle: "rectRounded"
+          }
+        },
         tower3d: { enabled: Boolean(options.tower3d) }
       },
       scales: type === "bar" ? {
-        x: { grid: { display: false }, ticks: { maxRotation: 30, minRotation: 0 } },
+        x: {
+          grid: { display: false },
+          ticks: {
+            color: "#667085",
+            font: { size: 11, weight: "600" },
+            maxRotation: 18,
+            minRotation: 0,
+            autoSkip: true,
+            autoSkipPadding: 10
+          }
+        },
         y: {
           beginAtZero: true,
           reverse: options.reverseScale || false,
-          ticks: { precision: 0 }
+          ticks: { precision: 0, color: "#667085", font: { size: 11 } },
+          grid: { color: "rgba(148, 163, 184, 0.22)", drawBorder: false }
         }
       } : {}
     }
   });
+}
+
+function prepareChartCanvas(canvas, type) {
+  if (type === "bar") {
+    canvas.width = 720;
+    canvas.height = 260;
+    return;
+  }
+
+  canvas.width = 260;
+  canvas.height = 260;
 }
 
 const tower3dPlugin = {
