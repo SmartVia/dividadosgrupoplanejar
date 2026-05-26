@@ -183,7 +183,9 @@ function renderMetrics(responses, closedQuestions, scaleQuestions, scaleStats) {
   document.getElementById("totalFechadas").textContent = closedQuestions.length;
   document.getElementById("totalEscalas").textContent = scaleQuestions.length;
   document.getElementById("aprovacaoMedia").textContent = `${Math.round(avgApproval || 0)}%`;
-  document.getElementById("cotasAbertas").textContent = dashboardData.quotas.filter(isQuotaOpen).length;
+  document.getElementById("cotasAbertas").textContent = dashboardData.quotas.filter((quota) => getQuotaStatusKey(quota) === "open").length;
+  document.getElementById("cotasQuase").textContent = dashboardData.quotas.filter((quota) => getQuotaStatusKey(quota) === "warning").length;
+  document.getElementById("cotasEncerradas").textContent = dashboardData.quotas.filter((quota) => getQuotaStatusKey(quota) === "closed").length;
 }
 
 function renderProfileCharts(responses) {
@@ -985,21 +987,26 @@ function setChartVisualMode(canvas, mode) {
 
 function renderQuotas() {
   const body = document.getElementById("quotasTableBody");
+  const insights = document.getElementById("quotaRegionInsights");
   const quotas = dashboardData.quotas || [];
   if (!quotas.length) {
-    body.innerHTML = '<tr><td colspan="6">Nenhuma cota cadastrada.</td></tr>';
+    body.innerHTML = '<tr><td colspan="8">Nenhuma cota cadastrada.</td></tr>';
+    if (insights) insights.innerHTML = "";
     return;
   }
   body.innerHTML = quotas.map((quota) => `
     <tr>
+      <td>${escapeHtml(quota.cidade || "Não informada")}</td>
+      <td>${escapeHtml(quota.regiao || "Não informada")}</td>
       <td>${escapeHtml(quota.sexo)}</td>
       <td>${escapeHtml(quota.faixaEtaria)}</td>
       <td>${numberValue(quota.meta)}</td>
       <td>${numberValue(quota.realizado)}</td>
       <td>${numberValue(quota.restante)}</td>
-      <td><span class="status-pill ${isQuotaOpen(quota) ? "status-open" : "status-closed"}">${isQuotaOpen(quota) ? "Aberta" : "Encerrada"}</span></td>
+      <td><span class="status-pill ${quotaStatusClass(quota)}">${quotaStatusLabel(quota)}</span></td>
     </tr>
   `).join("");
+  if (insights) insights.innerHTML = renderQuotaRegionInsights(quotas);
 }
 
 function populateFilters() {
@@ -1108,7 +1115,7 @@ function normalizeQuestionType(type) {
 
 function countQuotaStatus(quotas) {
   return (quotas || []).reduce((acc, quota) => {
-    const key = isQuotaOpen(quota) ? "Abertas" : "Encerradas";
+    const key = quotaStatusLabel(quota);
     acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {});
@@ -1116,6 +1123,67 @@ function countQuotaStatus(quotas) {
 
 function isQuotaOpen(quota) {
   return normalizeText(quota.status) === "aberta" && numberValue(quota.restante) > 0;
+}
+
+function getQuotaStatusKey(quota) {
+  const restante = numberValue(quota.restante);
+  if (restante <= 0 || normalizeText(quota.status) === "encerrada") return "closed";
+  if (restante <= 5) return "warning";
+  return "open";
+}
+
+function quotaStatusLabel(quota) {
+  const status = getQuotaStatusKey(quota);
+  if (status === "closed") return "Encerrada";
+  if (status === "warning") return "Quase encerrando";
+  return "Aberta";
+}
+
+function quotaStatusClass(quota) {
+  const status = getQuotaStatusKey(quota);
+  if (status === "closed") return "status-closed";
+  if (status === "warning") return "status-warning";
+  return "status-open";
+}
+
+function renderQuotaRegionInsights(quotas) {
+  const regions = {};
+  (quotas || []).forEach((quota) => {
+    const key = `${quota.cidade || "Não informada"} / ${quota.regiao || "Não informada"}`;
+    if (!regions[key]) {
+      regions[key] = { label: key, meta: 0, realizado: 0, restante: 0 };
+    }
+    regions[key].meta += numberValue(quota.meta);
+    regions[key].realizado += numberValue(quota.realizado);
+    regions[key].restante += numberValue(quota.restante);
+  });
+
+  const rows = Object.values(regions).map((item) => ({
+    ...item,
+    progress: item.meta ? Math.round((item.realizado / item.meta) * 100) : 0
+  })).sort((a, b) => b.progress - a.progress);
+
+  if (!rows.length) return "";
+  const mostAdvanced = rows[0];
+  const mostDelayed = [...rows].sort((a, b) => a.progress - b.progress)[0];
+  const pending = rows.filter((row) => row.restante > 0).length;
+
+  return `
+    <div class="quota-region-grid">
+      <article class="insight-card"><h3>Região mais avançada</h3><strong>${escapeHtml(mostAdvanced.label)}</strong><p>${mostAdvanced.progress}% concluído</p></article>
+      <article class="insight-card"><h3>Região mais atrasada</h3><strong>${escapeHtml(mostDelayed.label)}</strong><p>${mostDelayed.progress}% concluído</p></article>
+      <article class="insight-card"><h3>Regiões com cotas pendentes</h3><strong>${pending}</strong><p>com restante maior que zero</p></article>
+    </div>
+    <div class="quota-progress-list">
+      ${rows.slice(0, 10).map((row) => `
+        <div class="quota-progress-item">
+          <span>${escapeHtml(row.label)}</span>
+          <strong>${row.progress}%</strong>
+          <div class="proportion-bar"><span style="width:${Math.min(row.progress, 100)}%"></span></div>
+        </div>
+      `).join("")}
+    </div>
+  `;
 }
 
 function topWords(text, limit) {

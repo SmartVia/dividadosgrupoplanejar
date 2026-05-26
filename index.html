@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dividados Pesquisa</title>
-  <link rel="stylesheet" href="style.css?v=9">
+  <link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
   <main class="app-shell">
@@ -55,6 +55,17 @@
             </select>
           </label>
 
+          <section id="quotaCardsSection" class="quota-cards-section hidden" aria-live="polite">
+            <div class="quota-cards-header">
+              <div>
+                <span>Perfis disponíveis</span>
+                <strong id="quotaRegionTitle">Selecione cidade e região</strong>
+              </div>
+              <small id="quotaCardsHint">Escolha um perfil para iniciar a entrevista.</small>
+            </div>
+            <div id="quotaCards" class="quota-card-grid"></div>
+          </section>
+
           <div class="address-grid">
             <label>
               Endereço
@@ -89,7 +100,7 @@
             </label>
           </div>
 
-          <button type="button" id="checkQuotaButton" class="secondary-button">
+          <button type="button" id="checkQuotaButton" class="secondary-button hidden">
             Verificar cota
           </button>
         </section>
@@ -110,10 +121,12 @@
   </main>
 
   <script src="api-client.js?v=2"></script>
-  <script src="script.js?v=21"></script>
+  <script src="script.js?v=23"></script>
   <script src="script-hotfix-options.js?v=2"></script>
 </body>
 </html>
+
+
 
 
 

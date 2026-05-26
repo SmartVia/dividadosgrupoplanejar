@@ -114,6 +114,11 @@ function renderReport() {
       </div>
     </section>
 
+    <section class="print-page">
+      ${sectionTitle("Controle de Cotas por Região")}
+      ${quotaRegionTable(state.quotas)}
+    </section>
+
     ${chunkArray(closed, 4).map((chunk, page) => `
       <section class="print-page">
         ${sectionTitle(`Resultados Quantitativos${closed.length > 4 ? ` (${page + 1})` : ""}`)}
@@ -624,6 +629,40 @@ function territoryTable(title, counts) {
   `;
 }
 
+function quotaRegionTable(quotas) {
+  const rows = (quotas || []).slice().sort((a, b) => {
+    const city = String(a.cidade || "").localeCompare(String(b.cidade || ""), "pt-BR");
+    if (city !== 0) return city;
+    const region = String(a.regiao || "").localeCompare(String(b.regiao || ""), "pt-BR");
+    if (region !== 0) return region;
+    return (Number(a.ordem) || 9999) - (Number(b.ordem) || 9999);
+  });
+
+  return `
+    <div class="table-wrap report-quota-table-wrap">
+      <table class="territory-report-table report-quota-table">
+        <thead>
+          <tr><th>Cidade</th><th>Região</th><th>Sexo</th><th>Faixa etária</th><th>Meta</th><th>Realizado</th><th>Restante</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          ${rows.length ? rows.map((quota) => `
+            <tr>
+              <td>${escapeHtml(quota.cidade || "Não informada")}</td>
+              <td>${escapeHtml(quota.regiao || "Não informada")}</td>
+              <td>${escapeHtml(quota.sexo || "")}</td>
+              <td>${escapeHtml(quota.faixaEtaria || "")}</td>
+              <td>${numberValue(quota.meta)}</td>
+              <td>${numberValue(quota.realizado)}</td>
+              <td>${numberValue(quota.restante)}</td>
+              <td>${escapeHtml(quotaStatusLabel(quota))}</td>
+            </tr>
+          `).join("") : '<tr><td colspan="8">Nenhuma cota cadastrada.</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 function getReport() {
   return state.report || {};
 }
@@ -809,6 +848,8 @@ function scaleStatusClass(classification) { const normalized = normalizeText(cla
 function groupScaleStatsByGroup(scaleStats) { return scaleStats.reduce((acc, item) => { const group = item.question.group || "Geral"; if (!acc[group]) acc[group] = []; acc[group].push(item); return acc; }, {}); }
 function normalizeQuestionType(type) { const n = normalizeText(type); if (n === "escala") return "escala"; if (n === "semifechada" || n === "semi fechada" || n === "semi-fechada") return "semifechada"; if (n === "abertatexto" || n === "aberta" || n === "texto") return "abertatexto"; return "fechada"; }
 function isQuotaOpen(q) { return normalizeText(q.status) === "aberta" && Number(q.restante || 0) > 0; }
+function numberValue(value) { return Number(value || 0); }
+function quotaStatusLabel(quota) { const restante = numberValue(quota.restante); if (restante <= 0 || normalizeText(quota.status) === "encerrada") return "Encerrada"; if (restante <= 5) return "Quase encerrando"; return "Aberta"; }
 function formatNumber(value) { return Number(value || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function formatLabel(value) { return String(value || "").replace(/\s+/g, " ").trim() || "Nao informado"; }
 function normalizeGroupKey(value) { return normalizeText(value).replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim() || "nao informado"; }

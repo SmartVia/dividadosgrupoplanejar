@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = "dividados-pesquisa-v27";
+﻿const CACHE_NAME = "dividados-pesquisa-v29";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
@@ -39,4 +39,6 @@ self.addEventListener("fetch", (event) => {
     }))
   );
 });
+
+
 

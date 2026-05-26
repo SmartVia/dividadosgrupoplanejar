@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - Dividados Pesquisa</title>
-  <link rel="stylesheet" href="style.css?v=9">
+  <link rel="stylesheet" href="style.css?v=11">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     if (!window.Chart) {
@@ -65,6 +65,8 @@
       <article class="metric-card"><span>Perguntas escala</span><strong id="totalEscalas">0</strong></article>
       <article class="metric-card"><span>Aprovação média</span><strong id="aprovacaoMedia">0%</strong></article>
       <article class="metric-card"><span>Cotas abertas</span><strong id="cotasAbertas">0</strong></article>
+      <article class="metric-card"><span>Cotas quase encerrando</span><strong id="cotasQuase">0</strong></article>
+      <article class="metric-card"><span>Cotas encerradas</span><strong id="cotasEncerradas">0</strong></article>
     </section>
 
     <section class="dashboard-section">
@@ -185,18 +187,21 @@
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Sexo</th><th>Faixa etária</th><th>Meta</th><th>Realizado</th><th>Restante</th><th>Status</th></tr>
+            <tr><th>Cidade</th><th>Região</th><th>Sexo</th><th>Faixa etária</th><th>Meta</th><th>Realizado</th><th>Restante</th><th>Status</th></tr>
           </thead>
-          <tbody id="quotasTableBody"><tr><td colspan="6">Carregando dados...</td></tr></tbody>
+          <tbody id="quotasTableBody"><tr><td colspan="8">Carregando dados...</td></tr></tbody>
         </table>
       </div>
+      <div id="quotaRegionInsights" class="quota-region-insights"></div>
     </section>
   </main>
 
   <script src="api-client.js?v=2"></script>
-  <script src="dashboard.js?v=35"></script>
+  <script src="dashboard.js?v=37"></script>
 </body>
 </html>
+
+
 
 
 

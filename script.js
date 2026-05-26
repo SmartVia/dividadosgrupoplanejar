@@ -11,6 +11,10 @@ const SCALE_WEIGHTS = { A: 1, B: 2, C: 3, D: 4, E: 5, F: 6 };
 const form = document.getElementById("surveyForm");
 const messageBox = document.getElementById("message");
 const checkQuotaButton = document.getElementById("checkQuotaButton");
+const quotaCardsSection = document.getElementById("quotaCardsSection");
+const quotaCards = document.getElementById("quotaCards");
+const quotaRegionTitle = document.getElementById("quotaRegionTitle");
+const quotaCardsHint = document.getElementById("quotaCardsHint");
 const questionsSection = document.getElementById("questionsSection");
 const dynamicQuestions = document.getElementById("dynamicQuestions");
 const submitButton = document.getElementById("submitButton");
@@ -32,6 +36,7 @@ let syncInProgress = false;
 let questionDefinitions = [];
 let pesquisadorSuggestions = [];
 let regionDefinitions = [];
+let quotaDefinitions = [];
 let interviewStartAt = new Date().toISOString();
 let gpsState = {
   latitude: "",
@@ -39,7 +44,10 @@ let gpsState = {
   status: "Indisponível"
 };
 
-checkQuotaButton.addEventListener("click", handleCheckQuota);
+if (checkQuotaButton) {
+  checkQuotaButton.classList.add("hidden");
+  checkQuotaButton.addEventListener("click", handleCheckQuota);
+}
 form.addEventListener("submit", submitSurvey);
 syncNowButton.addEventListener("click", syncPendingResponses);
 window.addEventListener("online", handleConnectionChange);
@@ -49,8 +57,12 @@ faixaEtariaSelect.addEventListener("change", closeQuestions);
 cidadeInput.addEventListener("change", () => {
   populateRegionSelect(cidadeInput.value);
   closeQuestions();
+  renderQuotaCardsForSelectedRegion();
 });
-regiaoInput.addEventListener("change", closeQuestions);
+regiaoInput.addEventListener("change", () => {
+  closeQuestions();
+  renderQuotaCardsForSelectedRegion();
+});
 document.addEventListener("DOMContentLoaded", initializeOfflineMode);
 
 function initializeOfflineMode() {
@@ -139,8 +151,9 @@ async function loadQuotaOptions() {
 function populateQuotaOptions(quotas) {
   const currentSexo = sexoSelect.value;
   const currentFaixa = faixaEtariaSelect.value;
-  const sexos = uniqueOrderedValues(quotas.map((quota) => quota.sexo));
-  const faixas = uniqueOrderedValues(quotas.map((quota) => quota.faixaEtaria));
+  quotaDefinitions = normalizeQuotas(quotas);
+  const sexos = uniqueOrderedValues(quotaDefinitions.map((quota) => quota.sexo));
+  const faixas = uniqueOrderedValues(quotaDefinitions.map((quota) => quota.faixaEtaria));
 
   if (sexos.length) {
     sexoSelect.innerHTML = '<option value="">Selecione</option>' + sexos
@@ -159,6 +172,22 @@ function populateQuotaOptions(quotas) {
       faixaEtariaSelect.value = faixas.find((faixa) => normalizeText(faixa) === normalizeText(currentFaixa));
     }
   }
+
+  renderQuotaCardsForSelectedRegion();
+}
+
+function normalizeQuotas(quotas) {
+  return (quotas || []).map((quota, index) => ({
+    cidade: formatPlaceName(quota.cidade || quota.Cidade || ""),
+    regiao: formatPlaceName(quota.regiao || quota.Regiao || ""),
+    sexo: formatPlaceName(quota.sexo || quota.Sexo || ""),
+    faixaEtaria: String(quota.faixaEtaria || quota.FaixaEtaria || "").trim(),
+    meta: Number(quota.meta || quota.Meta) || 0,
+    realizado: Number(quota.realizado || quota.Realizado) || 0,
+    restante: Number(quota.restante || quota.Restante) || 0,
+    status: quota.status || quota.Status || "",
+    ordem: Number(quota.ordem || quota.Ordem || index + 1) || index + 1
+  })).sort((a, b) => a.ordem - b.ordem);
 }
 
 function cacheQuotas(quotas) {
@@ -185,6 +214,10 @@ function uniqueOrderedValues(values) {
       seen.add(key);
       return true;
     });
+}
+
+function sameNormalizedValue(a, b) {
+  return normalizeText(a) === normalizeText(b);
 }
 
 function registerServiceWorker() {
@@ -236,6 +269,101 @@ function clearMessage() {
 function closeQuestions() {
   quotaIsOpen = false;
   questionsSection.classList.add("hidden");
+}
+
+function unlockQuestionsFromQuota(quota) {
+  sexoSelect.value = quota.sexo;
+  faixaEtariaSelect.value = quota.faixaEtaria;
+  quotaIsOpen = true;
+  startInterviewAudit();
+  questionsSection.classList.remove("hidden");
+  highlightSelectedQuota(quota);
+  showMessage("Perfil selecionado. A entrevista foi liberada.", "success");
+}
+
+function renderQuotaCardsForSelectedRegion() {
+  if (!quotaCardsSection || !quotaCards) return;
+
+  closeQuestions();
+  sexoSelect.value = "";
+  faixaEtariaSelect.value = "";
+
+  const cidade = cidadeInput.value;
+  const regiao = regiaoInput.value;
+
+  if (!cidade || !regiao) {
+    quotaCardsSection.classList.add("hidden");
+    quotaCards.innerHTML = "";
+    return;
+  }
+
+  const regionQuotas = quotaDefinitions
+    .filter((quota) => sameNormalizedValue(quota.cidade, cidade) && sameNormalizedValue(quota.regiao, regiao))
+    .sort((a, b) => a.ordem - b.ordem);
+
+  quotaCardsSection.classList.remove("hidden");
+  quotaRegionTitle.textContent = `${regiao} — ${cidade}`;
+  quotaCardsHint.textContent = navigator.onLine
+    ? "Escolha um perfil aberto para iniciar a entrevista."
+    : "Você está offline. As cotas podem estar desatualizadas.";
+
+  if (!regionQuotas.length) {
+    quotaCards.innerHTML = '<p class="muted-text">Nenhuma cota cadastrada para esta cidade e região.</p>';
+    return;
+  }
+
+  quotaCards.innerHTML = regionQuotas.map((quota, index) => quotaCardHtml(quota, index)).join("");
+  quotaCards.querySelectorAll("[data-quota-index]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const quota = regionQuotas[Number(button.dataset.quotaIndex)];
+      if (!quota || getQuotaVisualStatus(quota).key === "closed") return;
+
+      pesquisadorInput.value = formatPersonName(pesquisadorInput.value);
+      if (!pesquisadorInput.value.trim()) {
+        showMessage("Informe o nome do pesquisador antes de selecionar a cota.", "error");
+        pesquisadorInput.focus();
+        return;
+      }
+
+      if (!navigator.onLine) {
+        showMessage("Você está offline. As cotas podem estar desatualizadas, mas a entrevista será salva neste aparelho.", "info");
+      }
+
+      unlockQuestionsFromQuota(quota);
+    });
+  });
+}
+
+function quotaCardHtml(quota, index) {
+  const status = getQuotaVisualStatus(quota);
+  const disabled = status.key === "closed";
+  return `
+    <button type="button" class="quota-profile-card ${status.className}" data-quota-index="${index}" ${disabled ? "disabled" : ""}>
+      <span class="quota-status-dot" aria-hidden="true"></span>
+      <strong>${escapeHtml(quota.sexo)} — ${escapeHtml(quota.faixaEtaria)}</strong>
+      <small>${escapeHtml(status.label)}</small>
+    </button>
+  `;
+}
+
+function getQuotaVisualStatus(quota) {
+  const restante = Number(quota.restante) || 0;
+  if (restante <= 0 || normalizeText(quota.status) === "encerrada") {
+    return { key: "closed", className: "quota-closed", label: "Cota encerrada" };
+  }
+  if (restante <= 5) {
+    return { key: "warning", className: "quota-warning", label: `${restante} disponível(is)` };
+  }
+  return { key: "open", className: "quota-open", label: `${restante} disponíveis` };
+}
+
+function highlightSelectedQuota(selectedQuota) {
+  if (!quotaCards) return;
+  quotaCards.querySelectorAll(".quota-profile-card").forEach((card) => {
+    const text = normalizeText(card.textContent);
+    const selectedText = normalizeText(`${selectedQuota.sexo} ${selectedQuota.faixaEtaria}`);
+    card.classList.toggle("is-selected", text.includes(selectedText));
+  });
 }
 
 function startInterviewAudit() {
@@ -472,6 +600,8 @@ async function handleCheckQuota() {
 
   try {
     const response = await checkQuota({
+      cidade: profile.cidade,
+      regiao: profile.regiao,
       sexo: profile.sexo,
       faixaEtaria: profile.faixaEtaria
     });
@@ -524,7 +654,7 @@ async function submitSurvey(event) {
       resetFormAfterSave();
     } else if (response.error === "quota_closed") {
       closeQuestions();
-      showMessage("Cota encerrada para este perfil. Procure outro entrevistado.", "error");
+      showMessage(response.message || "Esta cota acabou de ser encerrada. Selecione outro perfil.", "error");
     } else {
       showMessage(response.message || "Nao foi possivel salvar a entrevista.", "error");
     }

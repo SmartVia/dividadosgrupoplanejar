@@ -438,6 +438,89 @@ button:disabled {
   color: #9a3412;
 }
 
+.quota-cards-section {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  background: #f8fafc;
+}
+
+.quota-cards-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.quota-cards-header span,
+.quota-cards-header small {
+  display: block;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.quota-cards-header strong {
+  color: #0f172a;
+}
+
+.quota-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.quota-profile-card {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr);
+  gap: 8px 10px;
+  align-items: center;
+  width: 100%;
+  min-height: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: left;
+  background: #fff;
+  cursor: pointer;
+}
+
+.quota-profile-card strong,
+.quota-profile-card small {
+  grid-column: 2;
+}
+
+.quota-profile-card small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.quota-status-dot {
+  grid-row: 1 / span 2;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #16a34a;
+}
+
+.quota-profile-card.quota-warning .quota-status-dot {
+  background: #d97706;
+}
+
+.quota-profile-card.quota-closed .quota-status-dot {
+  background: #dc2626;
+}
+
+.quota-profile-card.quota-closed {
+  opacity: 0.64;
+  cursor: not-allowed;
+}
+
+.quota-profile-card.is-selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14);
+}
+
 .hidden {
   display: none;
 }
@@ -528,6 +611,43 @@ th {
 .status-closed {
   color: var(--error-text);
   background: var(--error-bg);
+}
+
+.status-warning {
+  color: #9a3412;
+  background: #ffedd5;
+}
+
+.quota-region-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.quota-progress-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.quota-progress-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 12px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.quota-progress-item span {
+  font-weight: 800;
+}
+
+.quota-progress-item .proportion-bar {
+  grid-column: 1 / -1;
 }
 
 @media (max-width: 760px) {
@@ -2673,6 +2793,9 @@ td {
 @media (max-width: 760px) {
   .scale-options,
   .address-grid,
+  .quota-card-grid,
+  .quota-region-grid,
+  .quota-progress-item,
   .ranking-layout,
   .scale-ranking-columns,
   .scale-kpi-grid,
