@@ -140,6 +140,14 @@ async function loadQuotaOptions() {
   try {
     const response = await getQuotas();
     if (response.ok && response.quotas && response.quotas.length) {
+      if (hasQuotaColumnProblem(response.quotas)) {
+        localStorage.removeItem(QUOTAS_CACHE_KEY);
+        quotaDefinitions = [];
+        renderQuotaCardsForSelectedRegion();
+        showMessage("A API ainda não está lendo as colunas Região e Faixa Etaria da aba Cotas. Atualize o apps-script.js no Google Apps Script e faça uma nova implantação.", "error");
+        return;
+      }
+
       cacheQuotas(response.quotas);
       populateQuotaOptions(response.quotas);
     }
@@ -188,6 +196,17 @@ function normalizeQuotas(quotas) {
     status: quota.status || quota.Status || "",
     ordem: Number(quota.ordem || quota.Ordem || index + 1) || index + 1
   })).sort((a, b) => a.ordem - b.ordem);
+}
+
+function hasQuotaColumnProblem(quotas) {
+  const rows = quotas || [];
+  if (!rows.length) return false;
+
+  const hasAnyQuota = rows.some((quota) => String(quota.cidade || quota.Cidade || quota.sexo || quota.Sexo || "").trim());
+  const allWithoutRegion = rows.every((quota) => !String(quota.regiao || quota.Regiao || "").trim());
+  const allWithoutAgeRange = rows.every((quota) => !String(quota.faixaEtaria || quota.FaixaEtaria || "").trim());
+
+  return hasAnyQuota && (allWithoutRegion || allWithoutAgeRange);
 }
 
 function cacheQuotas(quotas) {
