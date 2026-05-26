@@ -28,6 +28,11 @@ function getResearchers() {
   return apiRequest("getResearchers", {});
 }
 
+function getRegions() {
+  // Futuro Supabase: buscar na tabela `regioes`.
+  return apiRequest("getRegions", {});
+}
+
 function checkQuota(payload) {
   return apiRequest("checkQuota", payload);
 }

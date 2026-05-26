@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dividados Pesquisa</title>
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
   <main class="app-shell">
@@ -25,7 +25,7 @@
       </section>
 
       <div id="message" class="message" hidden></div>
-      <p class="privacy-note">A localização é usada apenas para auditoria da entrevista e pode ser negada sem impedir o preenchimento.</p>
+      <p class="privacy-note">A localizaÃ§Ã£o Ã© usada apenas para auditoria da entrevista e pode ser negada sem impedir o preenchimento.</p>
 
       <form id="surveyForm" autocomplete="off">
         <section class="form-section">
@@ -35,7 +35,7 @@
             Nome do pesquisador
             <div class="combo-field">
               <input type="text" id="pesquisador" name="pesquisador" list="pesquisadorOptions" autocomplete="off" required>
-              <button type="button" id="pesquisadorToggle" class="combo-toggle" aria-label="Mostrar pesquisadores cadastrados">⌄</button>
+              <button type="button" id="pesquisadorToggle" class="combo-toggle" aria-label="Mostrar pesquisadores cadastrados">âŒ„</button>
               <datalist id="pesquisadorOptions"></datalist>
               <div id="pesquisadorMenu" class="combo-menu hidden"></div>
             </div>
@@ -43,23 +43,29 @@
 
           <label>
             Cidade
-            <div class="combo-field">
-              <input type="text" id="cidade" name="cidade" list="cidadeOptions" autocomplete="off" placeholder="Digite ou selecione a cidade" required>
-              <button type="button" id="cidadeToggle" class="combo-toggle" aria-label="Mostrar cidades cadastradas">⌄</button>
-              <datalist id="cidadeOptions"></datalist>
-              <div id="cidadeMenu" class="combo-menu hidden"></div>
-            </div>
+            <select id="cidade" name="cidade" required>
+              <option value="">Carregando cidades...</option>
+            </select>
           </label>
 
           <label>
-            Regiao/Bairro
-            <input type="text" id="regiao" name="regiao" required>
+            RegiÃ£o/Bairro
+            <select id="regiao" name="regiao" required disabled>
+              <option value="">Selecione a cidade primeiro</option>
+            </select>
           </label>
 
-          <label>
-            Endereco
-            <input type="text" id="endereco" name="endereco" required>
-          </label>
+          <div class="address-grid">
+            <label>
+              EndereÃ§o
+              <input type="text" id="endereco" name="endereco" placeholder="Ex.: Rua GoiÃ¡s" required>
+            </label>
+
+            <label>
+              NÃºmero
+              <input type="text" id="numero" name="numero" inputmode="numeric" placeholder="1450" required>
+            </label>
+          </div>
 
           <div class="grid-two">
             <label>
@@ -104,7 +110,8 @@
   </main>
 
   <script src="api-client.js?v=1"></script>
-  <script src="script.js?v=19"></script>
+  <script src="script.js?v=20"></script>
   <script src="script-hotfix-options.js?v=2"></script>
 </body>
 </html>
+

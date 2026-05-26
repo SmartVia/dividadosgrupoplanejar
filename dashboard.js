@@ -101,6 +101,7 @@ function normalizeResponses(rows) {
     cidade: row.Cidade || row.cidade || "",
     regiao: row.Regiao || row.regiao || "",
     endereco: row.Endereco || row.endereco || "",
+    numero: row.Numero || row.numero || "",
     sexo: row.Sexo || row.sexo || "",
     faixaEtaria: row.FaixaEtaria || row.faixaEtaria || "",
     escolaridade: row.Escolaridade || row.escolaridade || "",
@@ -195,6 +196,27 @@ function renderProfileCharts(responses) {
   createChart("regiaoChart", "regiao", "bar", countBy(responses, "regiao"), { tower3d });
   createChart("pesquisadorChart", "pesquisador", "bar", countBy(responses, "pesquisador"), { tower3d });
   createChart("cotasChart", "cotas", categoricalType, countQuotaStatus(dashboardData.quotas), { tower3d });
+  renderRegionRanking(responses);
+}
+
+function renderRegionRanking(responses) {
+  const container = document.getElementById("regionRanking");
+  if (!container) return;
+
+  const ranking = Object.entries(countBy(responses, "regiao"))
+    .filter(([region]) => normalizeText(region) !== "nao informado")
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10);
+
+  container.innerHTML = ranking.length
+    ? ranking.map(([region, total], index) => `
+      <div class="territory-ranking-item">
+        <strong>${index + 1}Âº</strong>
+        <span>${escapeHtml(region)}</span>
+        <em>${total} ${total === 1 ? "entrevista" : "entrevistas"}</em>
+      </div>
+    `).join("")
+    : '<p class="muted-text">Nenhuma regiÃ£o com entrevistas nos filtros atuais.</p>';
 }
 
 function renderResearcherSummary(responses) {

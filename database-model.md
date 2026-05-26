@@ -69,6 +69,7 @@ Campos sugeridos:
 - `cidade`: cidade normalizada.
 - `regiao`: regiao/bairro normalizado.
 - `endereco`: endereco informado.
+- `numero`: numero do endereco informado.
 - `sexo`: sexo do entrevistado.
 - `faixa_etaria`: faixa etaria usada na cota.
 - `latitude`: latitude, quando capturada.
@@ -127,6 +128,21 @@ Campos sugeridos:
 - `created_at`.
 - `updated_at`.
 
+## regioes
+
+Cadastro territorial padronizado usado pelo formulario.
+
+Campos sugeridos:
+
+- `id`: identificador unico.
+- `pesquisa_id`: referencia para `pesquisas`.
+- `cidade`: cidade padronizada.
+- `regiao`: regiao/bairro padronizado.
+- `ativa`: indica se aparece no formulario.
+- `ordem`: ordem de exibicao dentro da cidade.
+- `created_at`.
+- `updated_at`.
+
 ## usuarios
 
 Base futura para login e permissoes.
@@ -145,6 +161,6 @@ Campos sugeridos:
 ## Observacoes de migracao
 
 - O frontend deve continuar usando somente `api-client.js`.
-- As funcoes publicas devem permanecer: `getDashboardData`, `getQuestions`, `getQuotas`, `getResearchers`, `checkQuota` e `submitResponse`.
+- As funcoes publicas devem permanecer: `getDashboardData`, `getQuestions`, `getQuotas`, `getResearchers`, `getRegions`, `checkQuota` e `submitResponse`.
 - O Apps Script atual pode ser substituido por chamadas Supabase dentro de `api-client.js`.
 - A estrutura `respostas` + `respostas_detalhadas` facilita dashboards, cruzamentos e relatorios sem depender de colunas fixas.

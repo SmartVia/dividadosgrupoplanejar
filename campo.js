@@ -1,4 +1,4 @@
-const fieldMessage = document.getElementById("fieldMessage");
+﻿const fieldMessage = document.getElementById("fieldMessage");
 const refreshFieldButton = document.getElementById("refreshFieldButton");
 const exportCsvButton = document.getElementById("exportCsvButton");
 const printFieldButton = document.getElementById("printFieldButton");
@@ -33,15 +33,15 @@ async function loadFieldReport() {
 
   try {
     const response = await getDashboardData();
-    if (!response.ok) throw new Error(response.message || "Nao foi possivel carregar o relatório de campo.");
+    if (!response.ok) throw new Error(response.message || "Nao foi possivel carregar o relatÃ³rio de campo.");
 
     fieldRows = normalizeRows(response.responses || []);
     populateFilters();
     renderFieldReport();
     fieldLastUpdated.textContent = `Atualizado em ${new Date().toLocaleTimeString("pt-BR")}`;
   } catch (error) {
-    console.error("Erro no relatório de campo:", error);
-    showMessage(`Erro ao carregar relatório: ${error.message}`, "error");
+    console.error("Erro no relatÃ³rio de campo:", error);
+    showMessage(`Erro ao carregar relatÃ³rio: ${error.message}`, "error");
   } finally {
     refreshFieldButton.disabled = false;
     refreshFieldButton.textContent = "Atualizar dados";
@@ -60,11 +60,12 @@ function normalizeRows(rows) {
       cidade: formatLabel(row.Cidade || row.cidade || ""),
       regiao: formatLabel(row.Regiao || row.regiao || ""),
       endereco: row.Endereco || row.endereco || "",
+      numero: row.Numero || row.numero || "",
       sexo: row.Sexo || row.sexo || "",
       faixaEtaria: row.FaixaEtaria || row.faixaEtaria || "",
       latitude: row.Latitude || row.latitude || "",
       longitude: row.Longitude || row.longitude || "",
-      statusGPS: row.StatusGPS || row.statusGPS || "Indisponível",
+      statusGPS: row.StatusGPS || row.statusGPS || "IndisponÃ­vel",
       origem: row.Origem || row.origem || "",
       statusSincronizacao: row.StatusSincronizacao || row.statusSincronizacao || "",
       inicioDate: parseDate(inicio),
@@ -124,6 +125,7 @@ function renderTable(rows) {
         <td>${escapeHtml(row.cidade)}</td>
         <td>${escapeHtml(row.regiao)}</td>
         <td>${escapeHtml(row.endereco)}</td>
+        <td>${escapeHtml(row.numero)}</td>
         <td>${escapeHtml(row.sexo)}</td>
         <td>${escapeHtml(row.faixaEtaria)}</td>
         <td>${escapeHtml(row.latitude)}</td>
@@ -133,7 +135,7 @@ function renderTable(rows) {
         <td>${escapeHtml(row.statusSincronizacao)}</td>
       </tr>
     `).join("")
-    : '<tr><td colspan="13">Nenhuma entrevista encontrada para os filtros selecionados.</td></tr>';
+    : '<tr><td colspan="14">Nenhuma entrevista encontrada para os filtros selecionados.</td></tr>';
 }
 
 function getFilteredRows() {
@@ -155,19 +157,20 @@ function getFilteredRows() {
 function exportCsv() {
   const rows = getFilteredRows();
   const headers = [
-    "Data/Hora Início",
+    "Data/Hora InÃ­cio",
     "Data/Hora Envio",
     "Pesquisador",
     "Cidade",
-    "Região/Bairro",
-    "Endereço",
+    "RegiÃ£o/Bairro",
+    "EndereÃ§o",
+    "NÃºmero",
     "Sexo",
-    "Faixa Etária",
+    "Faixa EtÃ¡ria",
     "Latitude",
     "Longitude",
     "Status GPS",
     "Origem",
-    "Status Sincronização"
+    "Status SincronizaÃ§Ã£o"
   ];
   const body = rows.map((row) => [
     formatDateTime(row.dataHoraInicio),
@@ -176,6 +179,7 @@ function exportCsv() {
     row.cidade,
     row.regiao,
     row.endereco,
+    row.numero,
     row.sexo,
     row.faixaEtaria,
     row.latitude,
@@ -214,7 +218,7 @@ function uniqueValues(rows, field) {
 
 function countBy(rows, field) {
   return rows.reduce((acc, row) => {
-    const key = formatLabel(row[field] || "Não informado");
+    const key = formatLabel(row[field] || "NÃ£o informado");
     acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {});
@@ -263,7 +267,7 @@ function sameValue(a, b) {
 }
 
 function formatLabel(value) {
-  return String(value || "").replace(/\s+/g, " ").trim() || "Não informado";
+  return String(value || "").replace(/\s+/g, " ").trim() || "NÃ£o informado";
 }
 
 function normalizeText(value) {
@@ -278,3 +282,4 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+

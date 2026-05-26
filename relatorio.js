@@ -1,4 +1,4 @@
-const OPTION_KEYS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
+﻿const OPTION_KEYS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
 const SCALE_WEIGHTS = { A: 1, B: 2, C: 3, D: 4, E: 5, F: 6 };
 const COLORS = { A: "#16a34a", B: "#2563eb", C: "#f97316", D: "#7c3aed", E: "#dc2626", F: "#64748b", G: "#0891b2", H: "#475569", I: "#db2777", J: "#65a30d" };
 const PALETTE = ["#0f766e", "#2563eb", "#d97706", "#7c3aed", "#be123c", "#475569"];
@@ -38,7 +38,7 @@ async function loadReport() {
     await wait(250);
     renderCharts();
   } catch (error) {
-    reportRoot.innerHTML = `<section class="print-page"><h1>Erro ao carregar relatório</h1><p>${escapeHtml(error.message)}</p></section>`;
+    reportRoot.innerHTML = `<section class="print-page"><h1>Erro ao carregar relatÃ³rio</h1><p>${escapeHtml(error.message)}</p></section>`;
   }
 }
 
@@ -58,16 +58,16 @@ function renderReport() {
       <div class="cover-content">
         ${report.logo ? `<img src="${escapeHtml(report.logo)}" alt="Logo" class="report-logo">` : ""}
         <p class="eyebrow">${escapeHtml(report.empresa || "DIVIDADOS")}</p>
-        <h1>${escapeHtml(report.titulo || "Pesquisa de Opinião")}</h1>
-        <h2>${escapeHtml(report.subtitulo || "Relatório Executivo de Pesquisa")}</h2>
+        <h1>${escapeHtml(report.titulo || "Pesquisa de OpiniÃ£o")}</h1>
+        <h2>${escapeHtml(report.subtitulo || "RelatÃ³rio Executivo de Pesquisa")}</h2>
         <div class="cover-meta">
-          <strong>${escapeHtml(report.cidade || "Cidade não informada")}</strong>
+          <strong>${escapeHtml(report.cidade || "Cidade nÃ£o informada")}</strong>
           <span>${escapeHtml(report.data || new Date().toLocaleDateString("pt-BR"))}</span>
         </div>
       </div>
     </section>
 
-    ${textPage("Sumário", `
+    ${textPage("SumÃ¡rio", `
       <ol class="report-summary">
         <li>Objetivo da Pesquisa</li>
         <li>Metodologia</li>
@@ -76,7 +76,7 @@ function renderReport() {
         <li>Resultados Quantitativos</li>
         <li>Perguntas Escala e Rankings</li>
         <li>Resultados Qualitativos</li>
-        <li>Conclusão</li>
+        <li>ConclusÃ£o</li>
       </ol>
     `)}
 
@@ -100,9 +100,17 @@ function renderReport() {
       ${sectionTitle("Perfil da Amostra")}
       <div class="report-chart-grid">
         ${chartCard("Sexo", "profile_sexo", "pie")}
-        ${chartCard("Faixa etária", "profile_faixa", "bar")}
+        ${chartCard("Faixa etÃ¡ria", "profile_faixa", "bar")}
         ${chartCard("Cidade", "profile_cidade", "bar")}
-        ${chartCard("Região/Bairro", "profile_regiao", "bar")}
+        ${chartCard("RegiÃ£o/Bairro", "profile_regiao", "bar")}
+      </div>
+    </section>
+
+    <section class="print-page">
+      ${sectionTitle("Resumo GeogrÃ¡fico da Pesquisa")}
+      <div class="territory-report-grid">
+        ${territoryTable("Entrevistas por cidade", countBy(state.responses, "cidade"))}
+        ${territoryTable("Entrevistas por regiÃ£o/bairro", countBy(state.responses, "regiao"))}
       </div>
     </section>
 
@@ -119,7 +127,7 @@ function renderReport() {
 
     ${chunkArray(scales, 4).map((chunk, page) => `
       <section class="print-page">
-        ${sectionTitle(`Análise das Perguntas de Escala${scales.length > 4 ? ` (${page + 1})` : ""}`)}
+        ${sectionTitle(`AnÃ¡lise das Perguntas de Escala${scales.length > 4 ? ` (${page + 1})` : ""}`)}
         <div class="report-question-grid">
           ${chunk.map((stats) => scaleBlock(stats)).join("")}
         </div>
@@ -139,10 +147,10 @@ function renderReport() {
     ${semiQuestions.map((question) => semiOtherPage(question)).join("")}
 
     <section class="print-page conclusion-page">
-      ${sectionTitle("Conclusão")}
+      ${sectionTitle("ConclusÃ£o")}
       <p>${escapeHtml(report.conclusao)}</p>
       <div class="report-signature">
-        <strong>${escapeHtml(report.assinatura || report.responsavel || "Responsável técnico")}</strong>
+        <strong>${escapeHtml(report.assinatura || report.responsavel || "ResponsÃ¡vel tÃ©cnico")}</strong>
         <span>${escapeHtml(report.rodape || "Dividados Pesquisa e Mercado")}</span>
       </div>
     </section>
@@ -177,7 +185,7 @@ function questionBlock(question, prefix) {
   const counts = countQuestion(question);
   return `
     <article class="report-question-card avoid-break">
-      <h3>${escapeHtml(question.code)} — ${escapeHtml(question.text)}</h3>
+      <h3>${escapeHtml(question.code)} â€” ${escapeHtml(question.text)}</h3>
       ${question.context ? `<p class="report-context">${escapeHtml(question.context)}</p>` : ""}
       <canvas id="chart_${prefix}_${question.code}" width="220" height="220"></canvas>
       ${legend(question, counts)}
@@ -191,16 +199,16 @@ function questionBlock(question, prefix) {
 function scaleBlock(stats) {
   return `
     <article class="report-question-card avoid-break ${scaleStatusClass(stats.classification)}">
-      <h3>${escapeHtml(stats.question.code)} — ${escapeHtml(stats.question.text)}</h3>
+      <h3>${escapeHtml(stats.question.code)} â€” ${escapeHtml(stats.question.text)}</h3>
       <div class="report-scale-kpis">
         <span>Total <strong>${stats.total}</strong></span>
-        <span>Válidas <strong>${stats.validResponses}</strong></span>
-        <span>Média geral <strong>${formatNumber(stats.averageWithNto)}</strong></span>
-        <span>Média técnica <strong>${formatNumber(stats.technicalAverage)}</strong></span>
-        <span>Classificação <strong>${stats.classification}</strong></span>
-        <span>Aprovação <strong>${stats.approvalPercent}% (${stats.approvalCount})</strong></span>
+        <span>VÃ¡lidas <strong>${stats.validResponses}</strong></span>
+        <span>MÃ©dia geral <strong>${formatNumber(stats.averageWithNto)}</strong></span>
+        <span>MÃ©dia tÃ©cnica <strong>${formatNumber(stats.technicalAverage)}</strong></span>
+        <span>ClassificaÃ§Ã£o <strong>${stats.classification}</strong></span>
+        <span>AprovaÃ§Ã£o <strong>${stats.approvalPercent}% (${stats.approvalCount})</strong></span>
         <span>Regular <strong>${stats.regularPercent}% (${stats.regularCount})</strong></span>
-        <span>Reprovação <strong>${stats.rejectionPercent}% (${stats.rejectionCount})</strong></span>
+        <span>ReprovaÃ§Ã£o <strong>${stats.rejectionPercent}% (${stats.rejectionCount})</strong></span>
         <span>N.T.O <strong>${stats.ntoPercent}% (${stats.ntoCount})</strong></span>
       </div>
       <canvas id="chart_scale_${stats.question.code}" width="220" height="220"></canvas>
@@ -214,8 +222,8 @@ function scaleRankingReportPage(scales) {
   const ranked = scales.filter((item) => item.validResponses > 0);
   return `
     <section class="print-page">
-      ${sectionTitle("Análise das Perguntas de Escala")}
-      <p class="report-context">Pesos: Ótimo = 1, Bom = 2, Regular = 3, Ruim = 4, Péssimo = 5 e N.T.O = 6. Quanto menor a média técnica, melhor a avaliação. A média técnica exclui N.T.O.</p>
+      ${sectionTitle("AnÃ¡lise das Perguntas de Escala")}
+      <p class="report-context">Pesos: Ã“timo = 1, Bom = 2, Regular = 3, Ruim = 4, PÃ©ssimo = 5 e N.T.O = 6. Quanto menor a mÃ©dia tÃ©cnica, melhor a avaliaÃ§Ã£o. A mÃ©dia tÃ©cnica exclui N.T.O.</p>
       <div class="report-scale-ranking-grid">
         ${renderReportScaleRankingGroups(ranked)}
       </div>
@@ -233,7 +241,7 @@ function renderReportScaleRankingGroups(scaleStats) {
       <article class="scale-ranking-group report-scale-ranking-group avoid-break">
         <div class="scale-ranking-group-header">
           <strong>${escapeHtml(group)}</strong>
-          <span>Média do grupo: ${formatNumber(groupAverage)} | ${escapeHtml(classifyAverage(groupAverage))}</span>
+          <span>MÃ©dia do grupo: ${formatNumber(groupAverage)} | ${escapeHtml(classifyAverage(groupAverage))}</span>
         </div>
         <div class="scale-ranking-columns">
           <div><h4>Melhores</h4>${best.map((item, index) => renderReportScaleRankingItem(item, index)).join("")}</div>
@@ -261,7 +269,7 @@ function openQuestionPage(question) {
   const themes = detectThemes(valid.map((item) => item.text).join(" "));
   return `
     <section class="print-page">
-      ${sectionTitle(`${question.code} — ${question.text}`)}
+      ${sectionTitle(`${question.code} â€” ${question.text}`)}
       ${question.context ? `<p class="report-context">${escapeHtml(question.context)}</p>` : ""}
       <div class="report-open-layout">
         <div>
@@ -271,7 +279,7 @@ function openQuestionPage(question) {
               <div>
                 <strong>${escapeHtml(row.cidade || "Sem cidade")}${row.regiao ? " / " + escapeHtml(row.regiao) : ""}</strong>
                 <p>"${escapeHtml(text)}"</p>
-                <small>${escapeHtml(row.pesquisador || "Pesquisador não informado")} · ${escapeHtml(row.sexo || "")} · ${escapeHtml(row.faixaEtaria || "")}</small>
+                <small>${escapeHtml(row.pesquisador || "Pesquisador nÃ£o informado")} Â· ${escapeHtml(row.sexo || "")} Â· ${escapeHtml(row.faixaEtaria || "")}</small>
               </div>
             `).join("") : "<p>Sem respostas abertas para esta pergunta.</p>"}
           </div>
@@ -295,7 +303,7 @@ function semiOtherPage(question) {
   const themes = detectThemes(answers.map((item) => item.text).join(" "));
   return `
     <section class="print-page">
-      ${sectionTitle(`${question.code} — Principais respostas abertas da alternativa Outra`)}
+      ${sectionTitle(`${question.code} â€” Principais respostas abertas da alternativa Outra`)}
       <p class="report-context">${escapeHtml(question.text)}</p>
       <div class="report-open-layout">
         <div>
@@ -305,7 +313,7 @@ function semiOtherPage(question) {
               <div>
                 <strong>${escapeHtml(row.cidade || "Sem cidade")}${row.regiao ? " / " + escapeHtml(row.regiao) : ""}</strong>
                 <p>"${escapeHtml(text)}"</p>
-                <small>${escapeHtml(row.pesquisador || "Pesquisador não informado")} · ${escapeHtml(row.sexo || "")} · ${escapeHtml(row.faixaEtaria || "")}</small>
+                <small>${escapeHtml(row.pesquisador || "Pesquisador nÃ£o informado")} Â· ${escapeHtml(row.sexo || "")} Â· ${escapeHtml(row.faixaEtaria || "")}</small>
               </div>
             `).join("") : "<p>Sem respostas digitadas na alternativa Outra.</p>"}
           </div>
@@ -351,7 +359,7 @@ function renderReportCrossTable(crossTable) {
       <tbody>
         ${crossTable.rows.map((row) => `
           <tr>
-            <th>${escapeHtml(row.key)} — ${escapeHtml(row.label)}</th>
+            <th>${escapeHtml(row.key)} â€” ${escapeHtml(row.label)}</th>
             ${crossTable.columns.map((column) => {
               const cell = row.columns[column.key] || { count: 0, percentColumn: 0 };
               return `<td><strong>${cell.count}</strong><span>${cell.percentColumn}%</span></td>`;
@@ -369,8 +377,8 @@ function legend(question, counts) {
   const total = keys.reduce((sum, key) => sum + (counts[key] || 0), 0);
   return `<div class="report-legend">${keys.map((key) => {
     const count = counts[key] || 0;
-    const weight = question.type === "escala" ? ` — Peso ${getScaleWeight(key, question.alternatives[key])}` : "";
-    return `<div><span style="background:${COLORS[key]}"></span><strong>${key}</strong> — ${escapeHtml(question.alternatives[key] || key)} — ${percent(count, total)}% (${count} votos)${weight}</div>`;
+    const weight = question.type === "escala" ? ` â€” Peso ${getScaleWeight(key, question.alternatives[key])}` : "";
+    return `<div><span style="background:${COLORS[key]}"></span><strong>${key}</strong> â€” ${escapeHtml(question.alternatives[key] || key)} â€” ${percent(count, total)}% (${count} votos)${weight}</div>`;
   }).join("")}</div>`;
 }
 
@@ -381,14 +389,14 @@ function renderReportStatsTable(question, counts, options = {}) {
   const scaleSummary = options.scaleStats ? `
     <div class="stats-summary-grid report-stats-summary">
       <span>Total <strong>${options.scaleStats.total}</strong></span>
-      <span>Válidas <strong>${options.scaleStats.validResponses}</strong></span>
+      <span>VÃ¡lidas <strong>${options.scaleStats.validResponses}</strong></span>
       <span>N.T.O <strong>${options.scaleStats.ntoCount} (${options.scaleStats.ntoPercent}%)</strong></span>
-      <span>Média geral <strong>${formatNumber(options.scaleStats.averageWithNto)}</strong></span>
-      <span>Média técnica <strong>${formatNumber(options.scaleStats.technicalAverage)}</strong></span>
-      <span>Aprovação <strong>${options.scaleStats.approvalPercent}% (${options.scaleStats.approvalCount})</strong></span>
+      <span>MÃ©dia geral <strong>${formatNumber(options.scaleStats.averageWithNto)}</strong></span>
+      <span>MÃ©dia tÃ©cnica <strong>${formatNumber(options.scaleStats.technicalAverage)}</strong></span>
+      <span>AprovaÃ§Ã£o <strong>${options.scaleStats.approvalPercent}% (${options.scaleStats.approvalCount})</strong></span>
       <span>Regular <strong>${options.scaleStats.regularPercent}% (${options.scaleStats.regularCount})</strong></span>
-      <span>Reprovação <strong>${options.scaleStats.rejectionPercent}% (${options.scaleStats.rejectionCount})</strong></span>
-      <span>Classificação <strong>${escapeHtml(options.scaleStats.classification)}</strong></span>
+      <span>ReprovaÃ§Ã£o <strong>${options.scaleStats.rejectionPercent}% (${options.scaleStats.rejectionCount})</strong></span>
+      <span>ClassificaÃ§Ã£o <strong>${escapeHtml(options.scaleStats.classification)}</strong></span>
     </div>
   ` : "";
   const otherAnswers = options.otherAnswers || [];
@@ -402,18 +410,18 @@ function renderReportStatsTable(question, counts, options = {}) {
   return `
     <div class="stats-table-block report-stats-table-block">
       <div class="stats-table-header">
-        <strong>Tabela estatística</strong>
-        <span>${rows.totalValid} válida(s)${rows.ntoTotal && !isScale ? ` | N.T.O: ${rows.ntoTotal}` : ""}</span>
+        <strong>Tabela estatÃ­stica</strong>
+        <span>${rows.totalValid} vÃ¡lida(s)${rows.ntoTotal && !isScale ? ` | N.T.O: ${rows.ntoTotal}` : ""}</span>
       </div>
       ${scaleSummary}
       <table class="stats-table report-stats-table">
         <thead>
-          <tr><th>Pos.</th><th>Alt.</th><th>Texto</th>${isScale ? "<th>Peso</th>" : ""}<th>Votos</th><th>%</th><th>Proporção</th></tr>
+          <tr><th>Pos.</th><th>Alt.</th><th>Texto</th>${isScale ? "<th>Peso</th>" : ""}<th>Votos</th><th>%</th><th>ProporÃ§Ã£o</th></tr>
         </thead>
         <tbody>
           ${rows.items.length ? rows.items.map((item, index) => `
             <tr class="${index === 0 && item.count > 0 ? "winner-row" : ""}">
-              <td>${index + 1}º</td>
+              <td>${index + 1}Âº</td>
               <td><strong>${escapeHtml(item.key)}</strong></td>
               <td>${escapeHtml(item.label)}${index === 0 && item.count > 0 ? ' <span class="winner-badge">Mais votada</span>' : ""}</td>
               ${isScale ? `<td>Peso ${item.weight}</td>` : ""}
@@ -421,7 +429,7 @@ function renderReportStatsTable(question, counts, options = {}) {
               <td>${item.percent}%</td>
               <td><div class="proportion-bar"><span style="width:${maxCount ? Math.round((item.count / maxCount) * 100) : 0}%"></span></div></td>
             </tr>
-          `).join("") : `<tr><td colspan="${isScale ? 7 : 6}">Sem respostas válidas.</td></tr>`}
+          `).join("") : `<tr><td colspan="${isScale ? 7 : 6}">Sem respostas vÃ¡lidas.</td></tr>`}
         </tbody>
       </table>
       ${rows.ntoTotal ? `<p class="nto-note">N.T.O separado: <strong>${rows.ntoTotal}</strong></p>` : ""}
@@ -595,32 +603,66 @@ function kpi(label, value) {
   return `<div class="summary-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
 }
 
+function territoryTable(title, counts) {
+  const rows = Object.entries(counts || {})
+    .filter(([label]) => normalizeText(label) !== "nao informado")
+    .sort((a, b) => b[1] - a[1]);
+  const total = rows.reduce((sum, item) => sum + item[1], 0);
+
+  return `
+    <article class="territory-report-card avoid-break">
+      <h3>${escapeHtml(title)}</h3>
+      <table class="territory-report-table">
+        <thead><tr><th>TerritÃ³rio</th><th>Entrevistas</th><th>%</th></tr></thead>
+        <tbody>
+          ${rows.length ? rows.map(([label, count]) => `
+            <tr><td>${escapeHtml(label)}</td><td>${count}</td><td>${percent(count, total)}%</td></tr>
+          `).join("") : '<tr><td colspan="3">Sem dados territoriais.</td></tr>'}
+        </tbody>
+      </table>
+    </article>
+  `;
+}
+
 function getReport() {
   return state.report || {};
 }
 
 function buildAutomaticReportConfig(rows) {
   const cities = [...new Set((rows || []).map((row) => row.Cidade || row.cidade || "").filter(Boolean))];
-  const cityLabel = cities.length === 1 ? cities[0] : (cities.length > 1 ? "Multicidades" : "Cidade não informada");
+  const cityLabel = cities.length === 1 ? cities[0] : (cities.length > 1 ? "Multicidades" : "Cidade nÃ£o informada");
   const month = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
   return {
-    titulo: "Pesquisa de Opinião",
-    subtitulo: "Relatório Executivo Quantitativo e Qualitativo",
+    titulo: "Pesquisa de OpiniÃ£o",
+    subtitulo: "RelatÃ³rio Executivo Quantitativo e Qualitativo",
     cidade: cityLabel,
     data: month,
     empresa: "DIVIDADOS PESQUISA",
-    objetivo: "Apresentar os resultados consolidados da pesquisa de opinião, com leitura do perfil da amostra, avaliação quantitativa, perguntas de escala, rankings técnicos e análise qualitativa das respostas abertas.",
-    metodologia: "Pesquisa realizada por entrevistadores em campo, com formulário digital, controle de cotas por sexo e faixa etária, registro das respostas no Google Sheets e consolidação automática dos indicadores no painel executivo.",
-    resumo: "Este relatório apresenta a distribuição da amostra, os resultados das perguntas fechadas, as médias técnicas das perguntas de escala e a síntese das respostas abertas coletadas em campo.",
-    conclusao: "Os dados consolidados permitem identificar tendências de percepção pública, pontos fortes, pontos críticos e prioridades relatadas pelos entrevistados.",
+    objetivo: "Apresentar os resultados consolidados da pesquisa de opiniÃ£o, com leitura do perfil da amostra, avaliaÃ§Ã£o quantitativa, perguntas de escala, rankings tÃ©cnicos e anÃ¡lise qualitativa das respostas abertas.",
+    metodologia: "Pesquisa realizada por entrevistadores em campo, com formulÃ¡rio digital, controle de cotas por sexo e faixa etÃ¡ria, registro das respostas no Google Sheets e consolidaÃ§Ã£o automÃ¡tica dos indicadores no painel executivo.",
+    resumo: "Este relatÃ³rio apresenta a distribuiÃ§Ã£o da amostra, os resultados das perguntas fechadas, as mÃ©dias tÃ©cnicas das perguntas de escala e a sÃ­ntese das respostas abertas coletadas em campo.",
+    conclusao: "Os dados consolidados permitem identificar tendÃªncias de percepÃ§Ã£o pÃºblica, pontos fortes, pontos crÃ­ticos e prioridades relatadas pelos entrevistados.",
     assinatura: "Dividados Pesquisa",
     rodape: "Dividados Pesquisa e Mercado"
   };
 }
 
 function normalizeResponses(rows) {
-  return rows.map((row) => ({ raw: row, dataHora: row.DataHora || "", pesquisador: row.Pesquisador || "", cidade: row.Cidade || "", regiao: row.Regiao || "", sexo: row.Sexo || "", faixaEtaria: row.FaixaEtaria || "", escolaridade: row.Escolaridade || "", renda: row.Renda || "", respostas: parseJson(row.RespostasJson || "") }));
+  return rows.map((row) => ({
+    raw: row,
+    dataHora: row.DataHora || "",
+    pesquisador: row.Pesquisador || "",
+    cidade: row.Cidade || "",
+    regiao: row.Regiao || "",
+    endereco: row.Endereco || "",
+    numero: row.Numero || "",
+    sexo: row.Sexo || "",
+    faixaEtaria: row.FaixaEtaria || "",
+    escolaridade: row.Escolaridade || "",
+    renda: row.Renda || "",
+    respostas: parseJson(row.RespostasJson || "")
+  }));
 }
 
 function normalizeQuestions(questions) {
@@ -688,8 +730,8 @@ function calculateScaleStats(question) {
 function getAutomaticCrossTables() {
   const fields = [
     { key: "sexo", label: "Sexo" },
-    { key: "faixaEtaria", label: "Faixa etária" },
-    { key: "regiao", label: "Região/Bairro" }
+    { key: "faixaEtaria", label: "Faixa etÃ¡ria" },
+    { key: "regiao", label: "RegiÃ£o/Bairro" }
   ];
   return getEligibleCrossQuestions().slice(0, 6).flatMap((question) => {
     return fields.map((field) => {
@@ -714,7 +756,7 @@ function buildCrossTable(responses, question, profileField) {
     const answer = String(getAnswer(response, question) || "").trim().toUpperCase();
     if (!byKey[answer]) return;
 
-    const profileValue = response[profileField] || response.raw?.[profileField] || "Não informado";
+    const profileValue = response[profileField] || response.raw?.[profileField] || "NÃ£o informado";
     const label = formatLabel(profileValue);
     const columnKey = normalizeGroupKey(label);
     if (!columnsMap[columnKey]) columnsMap[columnKey] = { key: columnKey, label, total: 0 };
@@ -792,3 +834,4 @@ function detectThemes(text) {
 function isLowValueOpenAnswer(text) {
   return new Set(["", "nao sei", "nada", "nenhuma", "sem opiniao", "nao respondeu"]).has(normalizeText(text));
 }
+

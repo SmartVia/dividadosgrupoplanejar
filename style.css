@@ -295,6 +295,13 @@ textarea:focus {
   gap: 14px;
 }
 
+.address-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(110px, 0.28fr);
+  gap: 14px;
+  align-items: end;
+}
+
 fieldset {
   margin: 0;
   border: 1px solid var(--line);
@@ -2088,6 +2095,56 @@ td {
   font-weight: 800;
 }
 
+.territory-ranking-card {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.territory-ranking-card h3 {
+  margin: 0 0 12px;
+  color: #0f172a;
+}
+
+.territory-ranking-list {
+  display: grid;
+  gap: 8px;
+}
+
+.territory-ranking-item {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #f8fafc;
+}
+
+.territory-ranking-item strong {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--primary);
+}
+
+.territory-ranking-item span {
+  font-weight: 900;
+}
+
+.territory-ranking-item em {
+  color: var(--muted);
+  font-style: normal;
+  font-weight: 800;
+}
+
 .researcher-card em {
   border-radius: 999px;
   padding: 2px 7px;
@@ -2413,6 +2470,42 @@ td {
   margin-top: 24px;
 }
 
+.territory-report-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.territory-report-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  background: #fff;
+}
+
+.territory-report-card h3 {
+  margin: 0 0 10px;
+  color: #0f172a;
+}
+
+.territory-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.territory-report-table th,
+.territory-report-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 8px;
+  text-align: left;
+}
+
+.territory-report-table th {
+  color: #334155;
+  background: #f8fafc;
+}
+
 .report-cross-grid {
   grid-template-columns: 1fr;
 }
@@ -2579,11 +2672,14 @@ td {
 
 @media (max-width: 760px) {
   .scale-options,
+  .address-grid,
   .ranking-layout,
   .scale-ranking-columns,
   .scale-kpi-grid,
+  .territory-ranking-item,
   .researcher-summary-grid,
   .report-kpi-grid,
+  .territory-report-grid,
   .report-scale-ranking-grid,
   .report-chart-grid,
   .report-question-grid,
@@ -2597,6 +2693,10 @@ td {
   }
 
   .ranking-item em {
+    grid-column: 2;
+  }
+
+  .territory-ranking-item em {
     grid-column: 2;
   }
 }

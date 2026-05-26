@@ -1,27 +1,12 @@
-const OFFLINE_QUEUE_KEY = "dividados_offline_queue_v1";
+﻿const OFFLINE_QUEUE_KEY = "dividados_offline_queue_v1";
 const QUESTIONS_CACHE_KEY = "dividados_questions_cache_v3";
 const QUOTAS_CACHE_KEY = "dividados_quotas_cache_v1";
 const RESEARCHERS_CACHE_KEY = "dividados_researchers_cache_v1";
+const REGIONS_CACHE_KEY = "dividados_regions_cache_v1";
 const MAX_CLOSED_QUESTIONS = 100;
 const MAX_OPEN_QUESTIONS = 20;
 const OPTION_KEYS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
 const SCALE_WEIGHTS = { A: 1, B: 2, C: 3, D: 4, E: 5, F: 6 };
-const CITY_CACHE_KEY = "dividados_mg_cities_v1";
-const MG_CITIES_API_URL = "https://servicodados.ibge.gov.br/api/v1/localidades/estados/MG/municipios";
-const MG_CITIES_FALLBACK = [
-  "Belo Horizonte",
-  "Betim",
-  "Contagem",
-  "Divinópolis",
-  "Governador Valadares",
-  "Itaúna",
-  "Juiz de Fora",
-  "Montes Claros",
-  "Nova Lima",
-  "Sete Lagoas",
-  "Uberaba",
-  "Uberlândia"
-];
 
 const form = document.getElementById("surveyForm");
 const messageBox = document.getElementById("message");
@@ -35,13 +20,10 @@ const pendingCountText = document.getElementById("pendingCountText");
 const syncNowButton = document.getElementById("syncNowButton");
 const cidadeInput = document.getElementById("cidade");
 const regiaoInput = document.getElementById("regiao");
-const cidadeOptions = document.getElementById("cidadeOptions");
 const pesquisadorInput = document.getElementById("pesquisador");
 const pesquisadorOptions = document.getElementById("pesquisadorOptions");
 const pesquisadorToggle = document.getElementById("pesquisadorToggle");
 const pesquisadorMenu = document.getElementById("pesquisadorMenu");
-const cidadeToggle = document.getElementById("cidadeToggle");
-const cidadeMenu = document.getElementById("cidadeMenu");
 const sexoSelect = document.getElementById("sexo");
 const faixaEtariaSelect = document.getElementById("faixaEtaria");
 
@@ -49,12 +31,12 @@ let quotaIsOpen = false;
 let syncInProgress = false;
 let questionDefinitions = [];
 let pesquisadorSuggestions = [];
-let cidadeSuggestions = [];
+let regionDefinitions = [];
 let interviewStartAt = new Date().toISOString();
 let gpsState = {
   latitude: "",
   longitude: "",
-  status: "Indisponível"
+  status: "IndisponÃ­vel"
 };
 
 checkQuotaButton.addEventListener("click", handleCheckQuota);
@@ -64,6 +46,11 @@ window.addEventListener("online", handleConnectionChange);
 window.addEventListener("offline", handleConnectionChange);
 sexoSelect.addEventListener("change", closeQuestions);
 faixaEtariaSelect.addEventListener("change", closeQuestions);
+cidadeInput.addEventListener("change", () => {
+  populateRegionSelect(cidadeInput.value);
+  closeQuestions();
+});
+regiaoInput.addEventListener("change", closeQuestions);
 document.addEventListener("DOMContentLoaded", initializeOfflineMode);
 
 function initializeOfflineMode() {
@@ -75,7 +62,7 @@ function initializeOfflineMode() {
   loadQuestions();
   setupLocationFields();
   setupSuggestionFields();
-  loadCityOptions();
+  loadRegionOptions();
   requestGpsLocation();
 
   if (navigator.onLine) {
@@ -221,17 +208,17 @@ function updateConnectionBox() {
   if (navigator.onLine) {
     offlineBox.classList.remove("is-offline");
     offlineBox.classList.add("is-online");
-    connectionStatus.textContent = "Online — enviando em tempo real";
+    connectionStatus.textContent = "Online â€” enviando em tempo real";
   } else {
     offlineBox.classList.remove("is-online");
     offlineBox.classList.add("is-offline");
-    connectionStatus.textContent = "Offline — respostas serão salvas neste aparelho";
+    connectionStatus.textContent = "Offline â€” respostas serÃ£o salvas neste aparelho";
   }
 }
 
 function updatePendingCount() {
   const total = getPendingQueue().length;
-  pendingCountText.textContent = `${total} ${total === 1 ? "pesquisa pendente" : "pesquisas pendentes"} de sincronização`;
+  pendingCountText.textContent = `${total} ${total === 1 ? "pesquisa pendente" : "pesquisas pendentes"} de sincronizaÃ§Ã£o`;
   syncNowButton.disabled = total === 0 || syncInProgress;
 }
 
@@ -253,7 +240,7 @@ function closeQuestions() {
 
 function startInterviewAudit() {
   interviewStartAt = new Date().toISOString();
-  if (!gpsState.latitude && gpsState.status !== "Negado pelo usuário") {
+  if (!gpsState.latitude && gpsState.status !== "Negado pelo usuÃ¡rio") {
     requestGpsLocation();
   }
 }
@@ -438,8 +425,6 @@ function getCachedQuestions() {
 }
 
 function getProfileData() {
-  cidadeInput.value = formatPlaceName(cidadeInput.value);
-  regiaoInput.value = formatPlaceName(regiaoInput.value);
   pesquisadorInput.value = formatPersonName(pesquisadorInput.value);
 
   return {
@@ -447,13 +432,14 @@ function getProfileData() {
     cidade: cidadeInput.value.trim(),
     regiao: regiaoInput.value.trim(),
     endereco: document.getElementById("endereco").value.trim(),
+    numero: document.getElementById("numero").value.trim(),
     sexo: document.getElementById("sexo").value,
     faixaEtaria: document.getElementById("faixaEtaria").value
   };
 }
 
 function validateProfile(profile) {
-  if (!profile.pesquisador || !profile.cidade || !profile.regiao || !profile.endereco || !profile.sexo || !profile.faixaEtaria) {
+  if (!profile.pesquisador || !profile.cidade || !profile.regiao || !profile.endereco || !profile.numero || !profile.sexo || !profile.faixaEtaria) {
     showMessage("Preencha todos os dados do perfil antes de verificar a cota.", "error");
     return false;
   }
@@ -471,7 +457,7 @@ async function handleCheckQuota() {
     quotaIsOpen = true;
     startInterviewAudit();
     questionsSection.classList.remove("hidden");
-    showMessage("Sem internet. A verificação de cota não está disponível agora, mas você pode continuar a pesquisa. A resposta será sincronizada depois.", "info");
+    showMessage("Sem internet. A verificaÃ§Ã£o de cota nÃ£o estÃ¡ disponÃ­vel agora, mas vocÃª pode continuar a pesquisa. A resposta serÃ¡ sincronizada depois.", "info");
     return;
   }
 
@@ -547,7 +533,7 @@ async function submitSurvey(event) {
     payload.origem = "Offline";
     payload.statusSincronizacao = "Pendente";
     saveOfflineResponse(payload);
-    showMessage("Sem conexão com a API. A pesquisa foi salva neste aparelho e será sincronizada depois.", "info");
+    showMessage("Sem conexÃ£o com a API. A pesquisa foi salva neste aparelho e serÃ¡ sincronizada depois.", "info");
     resetFormAfterSave();
   } finally {
     submitButton.disabled = false;
@@ -569,14 +555,15 @@ function buildSurveyPayload(origin) {
     dataHoraInicio: interviewStartAt || now,
     dataHoraEnvio: origin === "Online" ? now : "",
     pesquisador: formatPersonName(formData.get("pesquisador")),
-    cidade: formatPlaceName(formData.get("cidade")),
-    regiao: formatPlaceName(formData.get("regiao")),
+    cidade: formData.get("cidade"),
+    regiao: formData.get("regiao"),
     endereco: formData.get("endereco").trim(),
+    numero: formData.get("numero").trim(),
     sexo: formData.get("sexo"),
     faixaEtaria: formData.get("faixaEtaria"),
     latitude: gpsState.latitude || "",
     longitude: gpsState.longitude || "",
-    statusGPS: gpsState.status || "Indisponível",
+    statusGPS: gpsState.status || "IndisponÃ­vel",
     respostas: questionAnswers,
     respostaAberta: firstOpenAnswer ? firstOpenAnswer.resposta : "",
     origem: origin,
@@ -594,11 +581,12 @@ function compactSubmitPayload(payload) {
     cidade: payload.cidade,
     regiao: payload.regiao,
     endereco: payload.endereco,
+    numero: payload.numero,
     sexo: payload.sexo,
     faixaEtaria: payload.faixaEtaria,
     latitude: payload.latitude || "",
     longitude: payload.longitude || "",
-    statusGPS: payload.statusGPS || "Indisponível",
+    statusGPS: payload.statusGPS || "IndisponÃ­vel",
     respostas: (payload.respostas || []).map((answer) => ({
       campo: answer.campo,
       id: answer.id,
@@ -614,53 +602,107 @@ function compactSubmitPayload(payload) {
 }
 
 function setupLocationFields() {
-  [cidadeInput, regiaoInput].forEach((input) => {
-    input.addEventListener("blur", () => {
-      input.value = formatPlaceName(input.value);
-    });
+  pesquisadorInput.addEventListener("blur", () => {
+    pesquisadorInput.value = formatPersonName(pesquisadorInput.value);
   });
 }
 
-async function loadCityOptions() {
-  const cachedCities = getCachedCities();
-  populateCityOptions(cachedCities.length ? cachedCities : MG_CITIES_FALLBACK);
+async function loadRegionOptions() {
+  const cachedRegions = getCachedRegions();
+  if (cachedRegions.length) {
+    regionDefinitions = normalizeRegions(cachedRegions);
+    populateCitySelect();
+  }
 
-  if (!navigator.onLine) return;
+  if (!navigator.onLine || !isApiConfigured()) {
+    if (!regionDefinitions.length) {
+      populateEmptyRegionState();
+    }
+    return;
+  }
 
   try {
-    const response = await fetch(MG_CITIES_API_URL);
-    if (!response.ok) throw new Error("Nao foi possivel carregar municipios de MG.");
-
-    const cities = (await response.json())
-      .map((city) => city.nome)
-      .filter(Boolean)
-      .sort((a, b) => a.localeCompare(b, "pt-BR"));
-
-    if (cities.length) {
-      localStorage.setItem(CITY_CACHE_KEY, JSON.stringify(cities));
-      populateCityOptions(cities);
+    const response = await getRegions();
+    if (response.ok && response.regions && response.regions.length) {
+      regionDefinitions = normalizeRegions(response.regions);
+      cacheRegions(regionDefinitions);
+      populateCitySelect();
+    } else if (!regionDefinitions.length) {
+      populateEmptyRegionState();
     }
   } catch (error) {
-    console.warn("Nao foi possivel carregar cidades do IBGE. Usando cache/lista basica.", error);
+    console.warn("Nao foi possivel carregar regioes da planilha. Usando cache local.", error);
+    if (!regionDefinitions.length) populateEmptyRegionState();
   }
 }
 
-function getCachedCities() {
+function normalizeRegions(regions) {
+  return (regions || [])
+    .map((item, index) => ({
+      cidade: formatPlaceName(item.cidade || item.Cidade || ""),
+      regiao: formatPlaceName(item.regiao || item.Regiao || ""),
+      ativa: item.ativa || item.Ativa || "Sim",
+      ordem: Number(item.ordem || item.Ordem || index + 1) || index + 1
+    }))
+    .filter((item) => item.cidade && item.regiao && normalizeText(item.ativa) !== "nao")
+    .sort((a, b) => {
+      const cityCompare = a.cidade.localeCompare(b.cidade, "pt-BR");
+      if (cityCompare !== 0) return cityCompare;
+      return a.ordem - b.ordem;
+    });
+}
+
+function cacheRegions(regions) {
+  localStorage.setItem(REGIONS_CACHE_KEY, JSON.stringify(regions || []));
+}
+
+function getCachedRegions() {
   try {
-    return JSON.parse(localStorage.getItem(CITY_CACHE_KEY)) || [];
+    return JSON.parse(localStorage.getItem(REGIONS_CACHE_KEY)) || [];
   } catch (error) {
+    localStorage.removeItem(REGIONS_CACHE_KEY);
     return [];
   }
 }
 
-function populateCityOptions(cities) {
-  if (!cidadeOptions) return;
-
-  cidadeSuggestions = uniqueOrderedValues(cities);
-  cidadeOptions.innerHTML = cidadeSuggestions
-    .map((city) => `<option value="${escapeHtml(city)}"></option>`)
+function populateCitySelect() {
+  const currentCity = cidadeInput.value;
+  const cities = uniqueOrderedValues(regionDefinitions.map((item) => item.cidade));
+  cidadeInput.innerHTML = '<option value="">Selecione a cidade</option>' + cities
+    .map((city) => `<option value="${escapeHtml(city)}">${escapeHtml(city)}</option>`)
     .join("");
-  refreshSuggestionMenu(cidadeInput, cidadeMenu, cidadeSuggestions, false);
+
+  if (cities.some((city) => normalizeText(city) === normalizeText(currentCity))) {
+    cidadeInput.value = cities.find((city) => normalizeText(city) === normalizeText(currentCity));
+  }
+
+  populateRegionSelect(cidadeInput.value);
+}
+
+function populateRegionSelect(city) {
+  const currentRegion = regiaoInput.value;
+  const regions = regionDefinitions
+    .filter((item) => normalizeText(item.cidade) === normalizeText(city))
+    .sort((a, b) => a.ordem - b.ordem)
+    .slice(0, 20)
+    .map((item) => item.regiao);
+
+  regiaoInput.disabled = !city || !regions.length;
+  regiaoInput.innerHTML = !city
+    ? '<option value="">Selecione a cidade primeiro</option>'
+    : '<option value="">Selecione a região</option>' + regions
+      .map((region) => `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`)
+      .join("");
+
+  if (regions.some((region) => normalizeText(region) === normalizeText(currentRegion))) {
+    regiaoInput.value = regions.find((region) => normalizeText(region) === normalizeText(currentRegion));
+  }
+}
+
+function populateEmptyRegionState() {
+  cidadeInput.innerHTML = '<option value="">Cadastre cidades na aba Regioes</option>';
+  regiaoInput.innerHTML = '<option value="">Cadastre regiões na aba Regioes</option>';
+  regiaoInput.disabled = true;
 }
 
 function setupSuggestionFields() {
@@ -670,15 +712,6 @@ function setupSuggestionFields() {
     menu: pesquisadorMenu,
     getOptions: () => pesquisadorSuggestions,
     onSelect: formatPersonName,
-    maxVisible: 80
-  });
-
-  setupSuggestionField({
-    input: cidadeInput,
-    button: cidadeToggle,
-    menu: cidadeMenu,
-    getOptions: () => cidadeSuggestions,
-    onSelect: formatPlaceName,
     maxVisible: 80
   });
 }
@@ -730,7 +763,7 @@ function refreshSuggestionMenu(input, menu, options, shouldShow, config = {}) {
 
   menu.innerHTML = filtered.length
     ? filtered.map((option) => `<button type="button" class="combo-option" data-value="${escapeHtml(option)}">${escapeHtml(option)}</button>`).join("")
-    : '<div class="combo-empty">Nenhuma opção encontrada. Pode digitar normalmente.</div>';
+    : '<div class="combo-empty">Nenhuma opÃ§Ã£o encontrada. Pode digitar normalmente.</div>';
 
   menu.querySelectorAll(".combo-option").forEach((item) => {
     item.addEventListener("click", () => {
@@ -746,7 +779,7 @@ function refreshSuggestionMenu(input, menu, options, shouldShow, config = {}) {
 }
 
 function closeSuggestionMenus() {
-  [pesquisadorMenu, cidadeMenu].forEach((menu) => {
+  [pesquisadorMenu].forEach((menu) => {
     if (menu) menu.classList.add("hidden");
   });
 }
@@ -938,7 +971,7 @@ function escapeHtml(value) {
 }
 
 function finishOfflineSave() {
-  showMessage("Pesquisa salva neste aparelho. Ela será enviada automaticamente quando a internet voltar.", "success");
+  showMessage("Pesquisa salva neste aparelho. Ela serÃ¡ enviada automaticamente quando a internet voltar.", "success");
   resetFormAfterSave();
   submitButton.disabled = false;
   submitButton.textContent = "Enviar";
@@ -947,6 +980,7 @@ function finishOfflineSave() {
 
 function resetFormAfterSave() {
   form.reset();
+  populateRegionSelect("");
   interviewStartAt = new Date().toISOString();
   closeQuestions();
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -954,7 +988,7 @@ function resetFormAfterSave() {
 
 function requestGpsLocation() {
   if (!("geolocation" in navigator)) {
-    gpsState = { latitude: "", longitude: "", status: "Indisponível" };
+    gpsState = { latitude: "", longitude: "", status: "IndisponÃ­vel" };
     return;
   }
 
@@ -970,7 +1004,7 @@ function requestGpsLocation() {
       gpsState = {
         latitude: "",
         longitude: "",
-        status: error && error.code === error.PERMISSION_DENIED ? "Negado pelo usuário" : "Indisponível"
+        status: error && error.code === error.PERMISSION_DENIED ? "Negado pelo usuÃ¡rio" : "IndisponÃ­vel"
       };
     },
     {
@@ -1052,8 +1086,10 @@ async function syncPendingResponses() {
   updatePendingCount();
 
   if (stillPending.length) {
-    showMessage(`${stillPending.length} pesquisa(s) ainda pendente(s). O sistema tentará novamente depois.`, "info");
+    showMessage(`${stillPending.length} pesquisa(s) ainda pendente(s). O sistema tentarÃ¡ novamente depois.`, "info");
   } else {
     showMessage("Todas as pesquisas pendentes foram sincronizadas.", "success");
   }
 }
+
+

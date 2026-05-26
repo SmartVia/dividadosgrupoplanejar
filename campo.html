@@ -1,18 +1,18 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Relatório de Campo - Dividados Pesquisa</title>
-  <link rel="stylesheet" href="style.css?v=3">
+  <title>RelatÃ³rio de Campo - Dividados Pesquisa</title>
+  <link rel="stylesheet" href="style.css?v=8">
 </head>
 <body class="dashboard-page">
   <main class="dashboard-shell field-report-shell">
     <header class="dashboard-hero no-print">
       <div>
         <p class="eyebrow">Auditoria de campo</p>
-        <h1>Relatório de Campo</h1>
-        <p class="dashboard-subtitle">Registro operacional das entrevistas por pesquisador, horário, perfil, origem, sincronização e GPS.</p>
+        <h1>RelatÃ³rio de Campo</h1>
+        <p class="dashboard-subtitle">Registro operacional das entrevistas por pesquisador, horÃ¡rio, perfil, origem, sincronizaÃ§Ã£o e GPS.</p>
       </div>
       <div class="header-actions">
         <a class="small-link" href="dashboard.html">Dashboard</a>
@@ -26,7 +26,7 @@
 
     <section class="print-only field-print-title">
       <p class="eyebrow">Dividados Pesquisa</p>
-      <h1>Relatório de Campo / Auditoria das Entrevistas</h1>
+      <h1>RelatÃ³rio de Campo / Auditoria das Entrevistas</h1>
     </section>
 
     <section class="filter-panel no-print">
@@ -40,11 +40,11 @@
       <div class="filter-grid field-filter-grid">
         <label>Pesquisador<select id="fieldPesquisador"></select></label>
         <label>Cidade<select id="fieldCidade"></select></label>
-        <label>Região/Bairro<select id="fieldRegiao"></select></label>
+        <label>RegiÃ£o/Bairro<select id="fieldRegiao"></select></label>
         <label>Data inicial<input type="date" id="fieldDataInicial"></label>
         <label>Data final<input type="date" id="fieldDataFinal"></label>
         <label>Status GPS<select id="fieldStatusGps"></select></label>
-        <label>Status Sincronização<select id="fieldStatusSync"></select></label>
+        <label>Status SincronizaÃ§Ã£o<select id="fieldStatusSync"></select></label>
       </div>
     </section>
 
@@ -53,7 +53,7 @@
       <article class="metric-card"><span>Entrevistas hoje</span><strong id="fieldToday">0</strong></article>
       <article class="metric-card"><span>Pesquisadores</span><strong id="fieldResearchers">0</strong></article>
       <article class="metric-card"><span>GPS capturado</span><strong id="fieldGpsCaptured">0</strong></article>
-      <article class="metric-card"><span>GPS não capturado</span><strong id="fieldGpsMissing">0</strong></article>
+      <article class="metric-card"><span>GPS nÃ£o capturado</span><strong id="fieldGpsMissing">0</strong></article>
     </section>
 
     <section class="dashboard-section field-researcher-section">
@@ -78,23 +78,24 @@
         <table class="field-table">
           <thead>
             <tr>
-              <th>Data/Hora Início</th>
+              <th>Data/Hora InÃ­cio</th>
               <th>Data/Hora Envio</th>
               <th>Pesquisador</th>
               <th>Cidade</th>
-              <th>Região/Bairro</th>
-              <th>Endereço</th>
+              <th>RegiÃ£o/Bairro</th>
+              <th>EndereÃ§o</th>
+              <th>NÃºmero</th>
               <th>Sexo</th>
-              <th>Faixa Etária</th>
+              <th>Faixa EtÃ¡ria</th>
               <th>Latitude</th>
               <th>Longitude</th>
               <th>Status GPS</th>
               <th>Origem</th>
-              <th>Status Sincronização</th>
+              <th>Status SincronizaÃ§Ã£o</th>
             </tr>
           </thead>
           <tbody id="fieldTableBody">
-            <tr><td colspan="13">Carregando dados...</td></tr>
+            <tr><td colspan="14">Carregando dados...</td></tr>
           </tbody>
         </table>
       </div>
@@ -102,6 +103,8 @@
   </main>
 
   <script src="api-client.js?v=1"></script>
-  <script src="campo.js?v=2"></script>
+  <script src="campo.js?v=3"></script>
 </body>
 </html>
+
+
