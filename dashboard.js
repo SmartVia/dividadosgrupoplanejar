@@ -282,7 +282,12 @@ function renderClosedQuestions(responses, questions) {
     return;
   }
 
-  container.innerHTML = questions.map((question) => renderQuestionCard(question, "closed")).join("");
+  container.innerHTML = questions.map((question) => {
+    const counts = countQuestion(responses, question);
+    return renderQuestionCard(question, "closed", counts, {
+      otherAnswers: question.type === "semifechada" ? getSemiOtherAnswers(responses, question) : []
+    });
+  }).join("");
   questions.forEach((question) => {
     const counts = countQuestion(responses, question);
     createQuestionChart(`chart_closed_${question.code}`, `closed_${question.code}`, counts, question);
@@ -316,6 +321,7 @@ function renderScaleQuestions(scaleStats) {
         <div class="question-canvas-wrap"><canvas id="chart_scale_${stats.question.code}"></canvas></div>
         <div id="legend_scale_${stats.question.code}" class="question-legend"></div>
       </div>
+      ${renderStatsTable(stats.question, stats.counts, { scaleStats: stats })}
     </article>
   `).join("");
 
@@ -620,7 +626,7 @@ function renderOpenQuestions(responses, questions, semiQuestions = []) {
   }).join("");
 }
 
-function renderQuestionCard(question, prefix) {
+function renderQuestionCard(question, prefix, counts = {}, options = {}) {
   return `
     <article class="chart-card question-result-card">
       <div class="question-card-header">
@@ -632,6 +638,7 @@ function renderQuestionCard(question, prefix) {
         <div class="question-canvas-wrap"><canvas id="chart_${prefix}_${question.code}"></canvas></div>
         <div id="legend_${prefix}_${question.code}" class="question-legend"></div>
       </div>
+      ${renderStatsTable(question, counts, options)}
     </article>
   `;
 }
@@ -665,6 +672,95 @@ function renderLegend(containerId, question, counts) {
       </div>
     `;
   }).join("");
+}
+
+function renderStatsTable(question, counts, options = {}) {
+  const rows = buildQuestionStatsRows(question, counts);
+  const totalValid = rows.totalValid;
+  const ntoTotal = rows.ntoTotal;
+  const maxCount = Math.max(...rows.items.map((item) => item.count), 0);
+
+  const scaleSummary = options.scaleStats ? `
+    <div class="stats-summary-grid">
+      <span>Média ponderada <strong>${formatNumber(options.scaleStats.averageWithNto)}</strong></span>
+      <span>Média técnica <strong>${formatNumber(options.scaleStats.technicalAverage)}</strong></span>
+      <span>Aprovação <strong>${options.scaleStats.approvalPercent}%</strong></span>
+      <span>Reprovação <strong>${options.scaleStats.rejectionPercent}%</strong></span>
+      <span>Classificação <strong>${escapeHtml(options.scaleStats.classification)}</strong></span>
+    </div>
+  ` : "";
+
+  const otherAnswers = options.otherAnswers || [];
+  const otherList = otherAnswers.length ? `
+    <div class="other-answer-summary">
+      <strong>Respostas digitadas em Outra</strong>
+      <ul>${otherAnswers.slice(0, 6).map((text) => `<li>${escapeHtml(text)}</li>`).join("")}</ul>
+      ${otherAnswers.length > 6 ? `<small>+ ${otherAnswers.length - 6} resposta(s) adicional(is)</small>` : ""}
+    </div>
+  ` : "";
+
+  return `
+    <div class="stats-table-block">
+      <div class="stats-table-header">
+        <strong>Tabela estatística</strong>
+        <span>${totalValid} resposta(s) válida(s)${ntoTotal ? ` | N.T.O: ${ntoTotal}` : ""}</span>
+      </div>
+      ${scaleSummary}
+      <div class="stats-table-wrap">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th>Pos.</th>
+              <th>Alt.</th>
+              <th>Texto da alternativa</th>
+              <th>Votos</th>
+              <th>%</th>
+              <th>Proporção</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.items.length ? rows.items.map((item, index) => `
+              <tr class="${index === 0 && item.count > 0 ? "winner-row" : ""}">
+                <td>${index + 1}º</td>
+                <td><strong>${escapeHtml(item.key)}</strong></td>
+                <td>${escapeHtml(item.label)}${index === 0 && item.count > 0 ? ' <span class="winner-badge">Mais votada</span>' : ""}</td>
+                <td>${item.count}</td>
+                <td>${item.percent}%</td>
+                <td><div class="proportion-bar"><span style="width:${maxCount ? Math.round((item.count / maxCount) * 100) : 0}%"></span></div></td>
+              </tr>
+            `).join("") : '<tr><td colspan="6">Sem respostas válidas.</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+      ${ntoTotal ? `<p class="nto-note">N.T.O contabilizado separadamente: <strong>${ntoTotal}</strong> resposta(s).</p>` : ""}
+      ${otherList}
+    </div>
+  `;
+}
+
+function buildQuestionStatsRows(question, counts) {
+  const keys = getOptionKeys(question);
+  const ntoKeys = keys.filter((key) => isNtoOption(question.alternatives[key]));
+  const validKeys = keys.filter((key) => !ntoKeys.includes(key));
+  const totalValid = validKeys.reduce((sum, key) => sum + (counts[key] || 0), 0);
+  const ntoTotal = ntoKeys.reduce((sum, key) => sum + (counts[key] || 0), 0);
+  const items = validKeys.map((key, index) => ({
+    key,
+    label: question.alternatives[key] || key,
+    count: counts[key] || 0,
+    percent: percent(counts[key] || 0, totalValid),
+    originalIndex: index
+  })).sort((a, b) => {
+    if (b.count !== a.count) return b.count - a.count;
+    return a.originalIndex - b.originalIndex;
+  });
+  return { items, totalValid, ntoTotal };
+}
+
+function getSemiOtherAnswers(responses, question) {
+  return responses
+    .map((row) => getOtherTextForQuestion(row, question))
+    .filter(Boolean);
 }
 
 function calculateScaleStats(responses, question) {

@@ -1,4 +1,4 @@
-const CACHE_NAME = "dividados-pesquisa-v23";
+const CACHE_NAME = "dividados-pesquisa-v24";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
