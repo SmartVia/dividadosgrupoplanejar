@@ -119,7 +119,7 @@ function renderReport() {
       ${quotaRegionTable(state.quotas)}
     </section>
 
-    ${chunkArray(closed, 4).map((chunk, page) => `
+    ${chunkArray(closed, 2).map((chunk, page) => `
       <section class="print-page">
         ${sectionTitle(`Resultados Quantitativos${closed.length > 4 ? ` (${page + 1})` : ""}`)}
         <div class="report-question-grid">
@@ -130,7 +130,7 @@ function renderReport() {
 
     ${scales.length ? scaleRankingReportPage(scales) : ""}
 
-    ${chunkArray(scales, 4).map((chunk, page) => `
+    ${chunkArray(scales, 2).map((chunk, page) => `
       <section class="print-page">
         ${sectionTitle(`Análise das Perguntas de Escala${scales.length > 4 ? ` (${page + 1})` : ""}`)}
         <div class="report-question-grid">
@@ -160,6 +160,7 @@ function renderReport() {
       </div>
     </section>
   `;
+  decorateReportPages(report);
 }
 
 function renderCharts() {
@@ -183,6 +184,41 @@ function renderCharts() {
   });
   getAutomaticCrossTables().forEach((crossTable) => {
     createCrossChart(crossChartId(crossTable), crossTable);
+  });
+}
+
+function decorateReportPages(report) {
+  const pages = Array.from(reportRoot.querySelectorAll(".print-page"));
+  const totalPages = pages.length;
+  const generatedAt = new Date().toLocaleDateString("pt-BR");
+
+  pages.forEach((page, index) => {
+    if (page.classList.contains("cover-page")) {
+      page.insertAdjacentHTML("beforeend", `
+        <footer class="report-page-footer cover-footer">
+          <span>${escapeHtml(report.rodape || "Dividados Pesquisa")}</span>
+          <span>Gerado em ${generatedAt}</span>
+        </footer>
+      `);
+      return;
+    }
+
+    page.insertAdjacentHTML("afterbegin", `
+      <header class="report-page-header">
+        <div>
+          <strong>${escapeHtml(report.titulo || "Dividados Pesquisa")}</strong>
+          <span>${escapeHtml(report.cidade || "Todas as cidades")} · ${escapeHtml(report.data || generatedAt)}</span>
+        </div>
+        ${report.logo ? `<img src="${escapeHtml(report.logo)}" alt="Logo">` : `<em>${escapeHtml(report.empresa || "DIVIDADOS")}</em>`}
+      </header>
+    `);
+
+    page.insertAdjacentHTML("beforeend", `
+      <footer class="report-page-footer">
+        <span>${escapeHtml(report.rodape || "Dividados Pesquisa e Mercado")}</span>
+        <span>Página ${index + 1} de ${totalPages} · Gerado em ${generatedAt}</span>
+      </footer>
+    `);
   });
 }
 
@@ -868,6 +904,10 @@ function optionKeys(question) { return OPTION_KEYS.filter((key) => question.alte
 function isNtoOption(value) { const normalized = normalizeText(value).replace(/\./g, "").replace(/\s+/g, ""); return normalized === "nto" || normalized === "naotemopiniao" || normalized === "semopiniao"; }
 function getScaleWeight(key, label) { const normalized = normalizeText(label).replace(/\./g, "").replace(/\s+/g, ""); if (normalized === "otimo") return 1; if (normalized === "bom") return 2; if (normalized === "regular") return 3; if (normalized === "ruim") return 4; if (normalized === "pessimo") return 5; if (isNtoOption(label)) return 6; return SCALE_WEIGHTS[key] || 0; }
 function percent(value, total) { return total ? Math.round((value / total) * 100) : 0; }
+function average(values) {
+  const valid = (values || []).map(Number).filter((value) => Number.isFinite(value) && value > 0);
+  return valid.length ? valid.reduce((sum, value) => sum + value, 0) / valid.length : 0;
+}
 function classifyAverage(value) { if (!value) return "Sem dados"; if (value <= 1.8) return "Excelente"; if (value <= 2.6) return "Boa"; if (value <= 3.4) return "Regular"; if (value <= 4.2) return "Ruim"; return "Pessima"; }
 function scaleStatusClass(classification) { const normalized = normalizeText(classification); if (normalized === "excelente" || normalized === "boa") return "scale-status-good"; if (normalized === "regular") return "scale-status-warning"; if (normalized === "ruim" || normalized === "pessima") return "scale-status-bad"; return "scale-status-empty"; }
 function groupScaleStatsByGroup(scaleStats) { return scaleStats.reduce((acc, item) => { const group = item.question.group || "Geral"; if (!acc[group]) acc[group] = []; acc[group].push(item); return acc; }, {}); }
