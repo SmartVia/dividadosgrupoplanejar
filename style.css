@@ -813,6 +813,7 @@ button:disabled {
 }
 
 .quota-profile-card {
+  position: relative;
   display: grid;
   grid-template-columns: 12px minmax(0, 1fr);
   gap: 8px 10px;
@@ -860,7 +861,25 @@ button:disabled {
 
 .quota-profile-card.is-selected {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14);
+  background: #ecfdf5;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18);
+}
+
+.quota-profile-card.is-selected::after {
+  content: "Selecionada";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: #fff;
+  background: var(--primary);
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.quota-profile-card.is-selected strong {
+  padding-right: 92px;
 }
 
 .hidden {

@@ -97,23 +97,34 @@ async function loadResearcherOptions() {
       populateResearcherOptions(response.researchers);
     }
   } catch (error) {
-    console.warn("Nao foi possivel carregar pesquisadores da planilha. Usando cache/campo livre.", error);
+    console.warn("Nao foi possivel carregar pesquisadores da planilha. Usando cache local.", error);
   }
 }
 
 function populateResearcherOptions(researchers) {
-  if (!pesquisadorOptions) return;
+  if (!pesquisadorInput) return;
 
   const activeResearchers = (researchers || [])
     .filter((researcher) => normalizeText(researcher.status || "Ativo") !== "inativo")
     .map((researcher) => researcher.nome || researcher.Nome || "")
     .filter(Boolean);
 
-  pesquisadorSuggestions = uniqueOrderedValues(activeResearchers);
-  pesquisadorOptions.innerHTML = pesquisadorSuggestions
-    .map((name) => `<option value="${escapeHtml(name)}"></option>`)
+  const currentResearcher = pesquisadorInput.value;
+  pesquisadorSuggestions = uniqueOrderedValues(activeResearchers).slice(0, 15);
+
+  if (!pesquisadorSuggestions.length) {
+    pesquisadorInput.innerHTML = '<option value="">Cadastre pesquisadores na aba Pesquisadores</option>';
+    pesquisadorInput.disabled = true;
+    return;
+  }
+
+  pesquisadorInput.innerHTML = '<option value="">Selecione o pesquisador</option>' + pesquisadorSuggestions
+    .map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`)
     .join("");
-  refreshSuggestionMenu(pesquisadorInput, pesquisadorMenu, pesquisadorSuggestions, false);
+  pesquisadorInput.disabled = false;
+
+  const selected = pesquisadorSuggestions.find((name) => normalizeText(name) === normalizeText(currentResearcher));
+  if (selected) pesquisadorInput.value = selected;
 }
 
 function cacheResearchers(researchers) {
@@ -337,7 +348,6 @@ function renderQuotaCardsForSelectedRegion() {
       const quota = regionQuotas[Number(button.dataset.quotaIndex)];
       if (!quota || getQuotaVisualStatus(quota).key === "closed") return;
 
-      pesquisadorInput.value = formatPersonName(pesquisadorInput.value);
       if (!pesquisadorInput.value.trim()) {
         showMessage("Informe o nome do pesquisador antes de selecionar a cota.", "error");
         pesquisadorInput.focus();
@@ -357,7 +367,7 @@ function quotaCardHtml(quota, index) {
   const status = getQuotaVisualStatus(quota);
   const disabled = status.key === "closed";
   return `
-    <button type="button" class="quota-profile-card ${status.className}" data-quota-index="${index}" ${disabled ? "disabled" : ""}>
+    <button type="button" class="quota-profile-card ${status.className}" data-quota-index="${index}" data-sexo="${escapeHtml(quota.sexo)}" data-faixa="${escapeHtml(quota.faixaEtaria)}" ${disabled ? "disabled" : ""}>
       <span class="quota-status-dot" aria-hidden="true"></span>
       <strong>${escapeHtml(quota.sexo)} — ${escapeHtml(quota.faixaEtaria)}</strong>
       <small>${escapeHtml(status.label)}</small>
@@ -379,9 +389,10 @@ function getQuotaVisualStatus(quota) {
 function highlightSelectedQuota(selectedQuota) {
   if (!quotaCards) return;
   quotaCards.querySelectorAll(".quota-profile-card").forEach((card) => {
-    const text = normalizeText(card.textContent);
-    const selectedText = normalizeText(`${selectedQuota.sexo} ${selectedQuota.faixaEtaria}`);
-    card.classList.toggle("is-selected", text.includes(selectedText));
+    const isSelected = normalizeText(card.dataset.sexo) === normalizeText(selectedQuota.sexo)
+      && normalizeText(card.dataset.faixa) === normalizeText(selectedQuota.faixaEtaria);
+    card.classList.toggle("is-selected", isSelected);
+    card.setAttribute("aria-pressed", isSelected ? "true" : "false");
   });
 }
 
@@ -572,10 +583,8 @@ function getCachedQuestions() {
 }
 
 function getProfileData() {
-  pesquisadorInput.value = formatPersonName(pesquisadorInput.value);
-
   return {
-    pesquisador: pesquisadorInput.value.trim(),
+    pesquisador: formatPersonName(pesquisadorInput.value.trim()),
     cidade: cidadeInput.value.trim(),
     regiao: regiaoInput.value.trim(),
     endereco: document.getElementById("endereco").value.trim(),
@@ -751,7 +760,7 @@ function compactSubmitPayload(payload) {
 }
 
 function setupLocationFields() {
-  pesquisadorInput.addEventListener("blur", () => {
+  if (pesquisadorInput && pesquisadorInput.tagName === "INPUT") pesquisadorInput.addEventListener("blur", () => {
     pesquisadorInput.value = formatPersonName(pesquisadorInput.value);
   });
 }
