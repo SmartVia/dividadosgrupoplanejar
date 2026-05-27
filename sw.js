@@ -1,17 +1,19 @@
-﻿const CACHE_NAME = "dividados-pesquisa-v33";
+const CACHE_NAME = "dividados-pesquisa-v34";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
   "./dashboard.html",
   "./campo.html",
   "./relatorio.html",
+  "./respostas-abertas.html",
   "./style.css",
   "./api-client.js",
   "./script.js",
   "./script-hotfix-options.js",
   "./dashboard.js",
   "./campo.js",
-  "./relatorio.js"
+  "./relatorio.js",
+  "./respostas-abertas.js"
 ];
 
 self.addEventListener("install", (event) => {
@@ -39,6 +41,3 @@ self.addEventListener("fetch", (event) => {
     }))
   );
 });
-
-
-

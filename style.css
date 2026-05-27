@@ -16,6 +16,348 @@
   --shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
 }
 
+/* Relatorio separado de respostas abertas */
+.open-report-page {
+  margin: 0;
+  background: #eef2f6;
+  color: #0f172a;
+}
+
+.open-report-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px clamp(16px, 4vw, 36px);
+  background: rgba(255, 255, 255, 0.94);
+  border-bottom: 1px solid #dbe3ea;
+  backdrop-filter: blur(10px);
+}
+
+.open-report-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.open-report-shell {
+  width: min(1120px, calc(100% - 28px));
+  margin: 22px auto 48px;
+}
+
+.open-report-hero,
+.open-report-filters,
+.open-report-summary,
+.open-question-report-section {
+  background: #ffffff;
+  border: 1px solid #dbe3ea;
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+}
+
+.open-report-hero {
+  padding: clamp(22px, 4vw, 34px);
+  margin-bottom: 18px;
+}
+
+.open-report-hero h1 {
+  margin: 4px 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  letter-spacing: 0;
+}
+
+.open-report-hero p:last-child {
+  max-width: 760px;
+  margin: 0;
+  color: #475569;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.open-report-filters {
+  padding: 18px;
+  margin-bottom: 18px;
+}
+
+.open-report-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.open-report-filter-grid label {
+  display: grid;
+  gap: 6px;
+  color: #1e293b;
+  font-weight: 800;
+}
+
+.open-report-filter-grid select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0 10px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+  font-weight: 700;
+}
+
+.open-report-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px;
+  margin-bottom: 18px;
+}
+
+.open-summary-card {
+  min-height: 86px;
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.open-summary-card span {
+  color: #64748b;
+  font-weight: 800;
+}
+
+.open-summary-card strong {
+  font-size: 2rem;
+  line-height: 1;
+  color: #0f766e;
+}
+
+.open-questions-report {
+  display: grid;
+  gap: 18px;
+}
+
+.open-question-report-section {
+  padding: clamp(18px, 3vw, 26px);
+}
+
+.open-question-report-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 2px solid #0f766e;
+}
+
+.open-question-report-header h2 {
+  margin: 4px 0 6px;
+  font-size: clamp(1.2rem, 2.4vw, 1.7rem);
+  line-height: 1.25;
+}
+
+.open-question-report-header p {
+  margin: 0;
+  color: #64748b;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.open-question-report-header > strong {
+  flex: 0 0 auto;
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #065f46;
+  font-weight: 900;
+}
+
+.open-answer-report-list {
+  display: grid;
+  gap: 12px;
+}
+
+.open-answer-report-item {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #dbe3ea;
+  border-radius: 10px;
+  background: #fbfdff;
+}
+
+.open-answer-report-number {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #0f766e;
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.open-answer-meta {
+  margin: 0 0 8px;
+  color: #475569;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.open-answer-label {
+  margin: 0 0 4px;
+  color: #0f766e;
+  font-size: 0.8rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.open-answer-report-item blockquote {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: #0f172a;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 720px) {
+  .open-report-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .open-report-toolbar-actions {
+    width: 100%;
+  }
+
+  .open-report-toolbar-actions .secondary-button,
+  .open-report-toolbar-actions .primary-button {
+    flex: 1 1 160px;
+  }
+
+  .open-report-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .open-question-report-header {
+    flex-direction: column;
+  }
+
+  .open-answer-report-item {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  body.open-report-page {
+    background: #ffffff !important;
+    color: #111827 !important;
+    font-size: 10pt;
+  }
+
+  body.open-report-page .no-print {
+    display: none !important;
+  }
+
+  .open-report-shell {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .open-report-hero,
+  .open-report-summary,
+  .open-question-report-section {
+    box-shadow: none !important;
+    border-color: #cbd5e1 !important;
+    border-radius: 8px !important;
+  }
+
+  .open-report-hero {
+    padding: 0 0 8mm !important;
+    margin-bottom: 8mm !important;
+    border: 0 !important;
+    border-bottom: 2px solid #0f766e !important;
+  }
+
+  .open-report-summary {
+    grid-template-columns: repeat(3, 1fr) !important;
+    padding: 4mm !important;
+    margin-bottom: 8mm !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .open-summary-card {
+    min-height: 24mm !important;
+    padding: 3mm !important;
+  }
+
+  .open-question-report-section {
+    break-before: page;
+    page-break-before: always;
+    break-inside: auto;
+    page-break-inside: auto;
+    padding: 5mm !important;
+    margin: 0 0 7mm !important;
+  }
+
+  .open-question-report-header,
+  .open-answer-report-item {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .open-question-report-header h2 {
+    font-size: 15pt !important;
+  }
+
+  .open-question-report-header > strong {
+    background: #e6fffb !important;
+    color: #0f766e !important;
+  }
+
+  .open-answer-report-list {
+    gap: 3mm !important;
+  }
+
+  .open-answer-report-item {
+    padding: 3.5mm !important;
+    grid-template-columns: 8mm 1fr !important;
+  }
+
+  .open-answer-report-number {
+    width: 7mm !important;
+    height: 7mm !important;
+    font-size: 8pt !important;
+  }
+
+  .open-answer-meta {
+    font-size: 8pt !important;
+  }
+
+  .open-answer-report-item blockquote {
+    font-size: 10pt !important;
+    line-height: 1.45 !important;
+  }
+}
+
 /* Dashboard chart polish: fixed proportions without heavy effects. */
 .dashboard-page .chart-grid {
   gap: 14px;

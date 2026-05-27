@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Respostas Abertas - Dividados Pesquisa</title>
+  <link rel="stylesheet" href="style.css?v=15">
+</head>
+<body class="open-report-page">
+  <header class="open-report-toolbar no-print">
+    <a class="small-link" href="dashboard.html">Voltar ao dashboard</a>
+    <div class="open-report-toolbar-actions">
+      <button id="exportOpenTxtButton" class="secondary-button" type="button">Exportar TXT</button>
+      <button id="printOpenReportButton" class="primary-button" type="button">Imprimir / Salvar PDF</button>
+    </div>
+  </header>
+
+  <main class="open-report-shell">
+    <section class="open-report-hero">
+      <p class="eyebrow">Relatório qualitativo</p>
+      <h1>Respostas Abertas</h1>
+      <p>Exportação organizada das respostas textuais para leitura, PDF e categorização qualitativa externa.</p>
+    </section>
+
+    <div id="openReportMessage" class="message no-print" hidden></div>
+
+    <section class="open-report-filters no-print">
+      <div class="section-title-row">
+        <div>
+          <p class="eyebrow">Filtros</p>
+          <h2>Selecionar respostas</h2>
+        </div>
+        <button id="clearOpenFiltersButton" class="secondary-button" type="button">Limpar filtros</button>
+      </div>
+      <div class="open-report-filter-grid">
+        <label>Cidade<select id="filterOpenCidade"></select></label>
+        <label>Região/Bairro<select id="filterOpenRegiao"></select></label>
+        <label>Pesquisador<select id="filterOpenPesquisador"></select></label>
+        <label>Sexo<select id="filterOpenSexo"></select></label>
+        <label>Faixa etária<select id="filterOpenFaixa"></select></label>
+        <label>Pergunta aberta<select id="filterOpenQuestion"></select></label>
+      </div>
+    </section>
+
+    <section id="openReportSummary" class="open-report-summary"></section>
+
+    <div id="openQuestionsReport" class="open-questions-report">
+      <section class="open-question-report-section">
+        <h2>Carregando respostas abertas...</h2>
+        <p>Buscando dados do Google Sheets.</p>
+      </section>
+    </div>
+  </main>
+
+  <script src="api-client.js?v=2"></script>
+  <script src="respostas-abertas.js?v=1"></script>
+</body>
+</html>
